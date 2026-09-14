@@ -25,9 +25,21 @@ import { pinnedSha } from './check-upstream.mjs';
 
 const LICENSE_FILE_RE = /^(LICENSE|LICENCE|COPYING|NOTICE)(\.(md|txt|rst))?$/i;
 
+/**
+ * Returns the licence files present in a checked-out submodule, or `null` when
+ * the submodule is not checked out.
+ *
+ * An *uninitialised* submodule leaves an empty directory on disk, so "missing"
+ * and "empty" both mean "not checked out". Only a directory with content but
+ * no licence file is a genuine compliance problem — CI jobs deliberately
+ * initialise a single submodule, and the rest must not be reported as
+ * violations.
+ */
 function findLicenseFiles(dir) {
-  if (!existsSync(dir)) return null; // submodule not checked out
-  return readdirSync(dir).filter((f) => LICENSE_FILE_RE.test(f));
+  if (!existsSync(dir)) return null;
+  const entries = readdirSync(dir);
+  if (entries.length === 0) return null;
+  return entries.filter((f) => LICENSE_FILE_RE.test(f));
 }
 
 const argv = process.argv.slice(2);
