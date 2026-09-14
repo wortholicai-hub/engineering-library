@@ -1,0 +1,70 @@
+Engineering Library — Third-Party Notices
+=========================================
+
+This repository tracks third-party open-source projects as PINNED GIT
+SUBMODULES. Their source code is NOT copied or redistributed here; this
+repository records only the upstream URL and a specific commit identifier.
+
+Each upstream project retains its own copyright and licence. The full,
+unmodified licence text of each project is present at its original path inside
+the corresponding submodule.
+
+Machine-readable registry: /sources.yml
+Generated summary:         /docs/upstream-sources.md
+
+
+-------------------------------------------------------------------------------
+1. shadcn/ui
+-------------------------------------------------------------------------------
+Upstream:  https://github.com/shadcn-ui/ui
+Licence:   MIT
+Text:      frontend/shadcn/upstream/ui/LICENSE.md
+Path:      frontend/shadcn/upstream/ui  (git submodule)
+
+Copyright (c) shadcn and contributors.
+
+
+-------------------------------------------------------------------------------
+2. Chart.js
+-------------------------------------------------------------------------------
+Upstream:  https://github.com/chartjs/Chart.js
+Licence:   MIT
+Text:      frontend/chartjs/upstream/Chart.js/LICENSE.md
+Path:      frontend/chartjs/upstream/Chart.js  (git submodule)
+
+Copyright (c) Chart.js Contributors.
+
+
+-------------------------------------------------------------------------------
+3. react-chartjs-2
+-------------------------------------------------------------------------------
+Upstream:  https://github.com/reactchartjs/react-chartjs-2
+Licence:   MIT
+Text:      frontend/chartjs/upstream/react-chartjs-2/LICENSE.md
+Path:      frontend/chartjs/upstream/react-chartjs-2  (git submodule)
+
+Copyright (c) Jeremy Ayerst and contributors.
+
+
+-------------------------------------------------------------------------------
+EVALUATED AND EXCLUDED
+-------------------------------------------------------------------------------
+shadcn-ui/next-template  —  https://github.com/shadcn-ui/next-template
+
+This repository is ARCHIVED and contains NO LICENSE file. Absent an explicit
+grant, default copyright applies and redistribution is not permitted. No code
+from it appears anywhere in this repository. It remains recorded in
+/sources.yml with `enabled: false` so the decision stays auditable.
+
+
+-------------------------------------------------------------------------------
+DERIVED WORK
+-------------------------------------------------------------------------------
+Code in the internal directories — frontend/shadcn/templates and
+frontend/chartjs/examples — is written by us and licensed under the MIT licence
+in /LICENSE.
+
+It follows conventions established by shadcn/ui (the `cn` utility composed from
+clsx + tailwind-merge, and `cva`-based variant definitions) and is typed against
+the published typings of Chart.js. Both upstream projects are MIT licensed, and
+this notice provides the attribution that licence requires.

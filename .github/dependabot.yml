@@ -1,0 +1,92 @@
+version: 2
+
+# Dependency management for the Engineering Library.
+#
+# SCOPE — Dependabot manages OUR dependencies only:
+#   - the two internal packages (our own code)
+#   - the root tooling package
+#   - the GitHub Actions we use in our workflows
+#
+# It deliberately does NOT manage dependencies inside `*/upstream/*`. Those
+# submodules are upstream's code; upstream owns their dependency tree and we
+# consume them at a pinned commit. Bumping a dependency inside a submodule is
+# not something we can commit — a submodule only records a commit pointer.
+# Upstream dependency changes are surfaced instead by the sync workflow, which
+# reports "did dependencies change?" in every sync PR.
+#
+# Dependabot's own `gitsubmodule` ecosystem is intentionally unused: it would
+# bump submodule pointers without our licence re-verification, internal-code
+# guard, or validation gate. `.github/workflows/upstream-sync.yml` does that
+# job with those safeguards.
+
+updates:
+  # --- our tooling ----------------------------------------------------------
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+    open-pull-requests-limit: 5
+    labels: [dependencies, internal]
+    commit-message:
+      prefix: 'chore(deps)'
+
+  # --- internal code: Chart.js dashboard presets -----------------------------
+  - package-ecosystem: npm
+    directory: /frontend/chartjs/examples
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+    open-pull-requests-limit: 10
+    labels: [dependencies, internal, frontend]
+    commit-message:
+      prefix: 'chore(deps)'
+    groups:
+      # These move together; a split bump usually breaks the peer range.
+      charting:
+        patterns:
+          - 'chart.js'
+          - 'react-chartjs-2'
+      react:
+        patterns:
+          - 'react'
+          - 'react-dom'
+          - '@types/react*'
+      dev-tooling:
+        dependency-type: development
+        patterns:
+          - 'typescript'
+          - 'vitest'
+
+  # --- internal code: shadcn house variants ---------------------------------
+  - package-ecosystem: npm
+    directory: /frontend/shadcn/templates
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+    open-pull-requests-limit: 10
+    labels: [dependencies, internal, frontend]
+    commit-message:
+      prefix: 'chore(deps)'
+    groups:
+      shadcn-runtime:
+        patterns:
+          - 'class-variance-authority'
+          - 'clsx'
+          - 'tailwind-merge'
+      dev-tooling:
+        dependency-type: development
+
+  # --- our CI ---------------------------------------------------------------
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+    labels: [dependencies, ci]
+    commit-message:
+      prefix: 'chore(ci)'

@@ -1,0 +1,21 @@
+{
+  "name": "@engineering-library/shadcn-templates",
+  "version": "0.1.0",
+  "private": true,
+  "description": "INTERNAL. House variants and utilities following shadcn/ui conventions, built against the pinned upstream shadcn-ui/ui submodule.",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

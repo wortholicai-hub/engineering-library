@@ -1,0 +1,265 @@
+name: Upstream Sync
+
+# Detects upstream changes for every enabled source in sources.yml and opens
+# ONE pull request per source. Nothing is ever merged automatically: a sync PR
+# moves a pinned git submodule pointer and a human approves it.
+#
+# Triggers:
+#   - schedule        : daily drift check
+#   - workflow_dispatch: manual run (optionally a single source, or dry-run)
+
+on:
+  schedule:
+    # 06:00 UTC daily. Cron on GitHub is best-effort, not guaranteed on time.
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      source:
+        description: 'Sync a single source by name (blank = all enabled sources)'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Detect and report only — do not open pull requests'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. DETECT — compare each pinned commit against the live upstream branch.
+  # ---------------------------------------------------------------------------
+  detect:
+    name: Detect upstream drift
+    runs-on: ubuntu-latest
+    outputs:
+      has_updates: ${{ steps.check.outputs.has_updates }}
+      matrix: ${{ steps.check.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Submodules are NOT checked out here — drift detection reads the
+          # gitlink from the index and queries the GitHub API. Fast and cheap.
+          submodules: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Validate registry
+        run: npm run validate:registry
+
+      - name: Check upstream
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "${{ inputs.source }}" ]; then
+            node scripts/check-upstream.mjs --source "${{ inputs.source }}" --github-output
+          else
+            node scripts/check-upstream.mjs --github-output
+          fi
+
+      - name: Write report to job summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo '## Upstream drift report'
+            echo ''
+            echo '```'
+            node scripts/check-upstream.mjs
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # 2. SYNC — one job per outdated source: bump, validate, open a PR.
+  # ---------------------------------------------------------------------------
+  sync:
+    name: Sync ${{ matrix.source }}
+    needs: detect
+    if: needs.detect.outputs.has_updates == 'true' && inputs.dry_run != true
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Resolve source paths from the registry
+        id: src
+        run: |
+          node --input-type=module -e "
+            import { findSource } from './scripts/registry.mjs';
+            import { appendFileSync } from 'node:fs';
+            const s = findSource('${{ matrix.source }}');
+            appendFileSync(process.env.GITHUB_OUTPUT,
+              'path=' + s.path + '\n' +
+              'internal_dir=' + s.internal_dir + '\n' +
+              'title=' + s.title + '\n');
+          "
+
+      - name: Initialise only the submodule being synced
+        run: git submodule update --init -- "${{ steps.src.outputs.path }}"
+
+      - name: Record internal-code fingerprint (pre-sync)
+        id: pre
+        run: |
+          # Hash our own code BEFORE the sync so we can prove afterwards that
+          # the sync did not touch a single byte of it.
+          HASH=$(git ls-files -s -- "${{ steps.src.outputs.internal_dir }}" | sha256sum | cut -d' ' -f1)
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+          echo "Internal tree hash before sync: $HASH"
+
+      - name: Bump submodule pointer
+        id: sync
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/sync-upstream.mjs --source "${{ matrix.source }}"
+
+      - name: Load sync metadata
+        id: meta
+        run: |
+          FILE=".sync-output/${{ matrix.source }}.json"
+          if [ ! -f "$FILE" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No changes produced for ${{ matrix.source }}."
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "branch=$(jq -r .branch "$FILE")"
+            echo "subject=$(jq -r .commitSubject "$FILE")"
+            echo "from=$(jq -r .from "$FILE")"
+            echo "to=$(jq -r .to "$FILE")"
+            echo "ahead=$(jq -r .aheadBy "$FILE")"
+            echo "deps=$(jq -r .dependenciesChanged "$FILE")"
+          } >> "$GITHUB_OUTPUT"
+
+      # ---- VALIDATION GATE -------------------------------------------------
+      # Everything below must pass before a PR is opened.
+
+      - name: 'Validate · internal code untouched (guard)'
+        if: steps.meta.outputs.changed == 'true'
+        run: node scripts/guard-internal.mjs
+
+      - name: 'Validate · internal fingerprint unchanged'
+        if: steps.meta.outputs.changed == 'true'
+        run: |
+          HASH=$(git ls-files -s -- "${{ steps.src.outputs.internal_dir }}" | sha256sum | cut -d' ' -f1)
+          echo "Internal tree hash after sync:  $HASH"
+          if [ "$HASH" != "${{ steps.pre.outputs.hash }}" ]; then
+            echo "::error::Upstream sync modified internal code. Aborting."
+            exit 1
+          fi
+          echo "Internal code is byte-for-byte identical. ✓"
+
+      - name: 'Validate · registry + generated docs'
+        if: steps.meta.outputs.changed == 'true'
+        run: |
+          npm run validate:registry
+          npm run docs:render
+          # Regenerating docs updates the pinned commit table; stage it so the
+          # PR stays self-consistent.
+          git add docs/upstream-sources.md
+
+      - name: 'Validate · licence audit'
+        if: steps.meta.outputs.changed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/license-audit.mjs --remote
+
+      - name: 'Validate · internal packages still build and pass tests'
+        id: tests
+        if: steps.meta.outputs.changed == 'true'
+        working-directory: ${{ steps.src.outputs.internal_dir }}
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+
+      - name: Build validation summary
+        if: steps.meta.outputs.changed == 'true'
+        run: |
+          {
+            echo '| Check | Result |'
+            echo '| --- | --- |'
+            echo '| Registry schema + `.gitmodules` consistency | ✅ passed |'
+            echo '| Guard: only registered submodule pointers changed | ✅ passed |'
+            echo '| Internal code byte-for-byte unchanged | ✅ passed |'
+            echo '| Upstream licence re-verified at new commit | ✅ passed |'
+            echo '| Internal package typecheck (`tsc --noEmit`) | ✅ passed |'
+            echo '| Internal package tests | ✅ passed |'
+            echo '| Generated docs regenerated | ✅ passed |'
+          } > .sync-output/validation.md
+          # Splice the real results into the PR body.
+          node --input-type=module -e "
+            import { readFileSync, writeFileSync } from 'node:fs';
+            const body = readFileSync('.sync-output/${{ matrix.source }}.pr-body.md','utf8');
+            const val  = readFileSync('.sync-output/validation.md','utf8');
+            writeFileSync('.sync-output/${{ matrix.source }}.pr-body.md',
+              body.replace('_Validation results are appended by CI._', val));
+          "
+
+      # ---- PUBLISH ---------------------------------------------------------
+
+      - name: Commit and push sync branch
+        if: steps.meta.outputs.changed == 'true'
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout -b "${{ steps.meta.outputs.branch }}"
+          git add -- "${{ steps.src.outputs.path }}" docs/upstream-sources.md
+          git commit -m "${{ steps.meta.outputs.subject }}" \
+                     -m "Upstream: ${{ steps.src.outputs.title }}" \
+                     -m "From: ${{ steps.meta.outputs.from }}" \
+                     -m "To:   ${{ steps.meta.outputs.to }}" \
+                     -m "Opened by .github/workflows/upstream-sync.yml"
+          git push --force-with-lease origin "${{ steps.meta.outputs.branch }}"
+
+      - name: Open or update pull request
+        if: steps.meta.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${{ steps.meta.outputs.branch }}"
+          EXISTING=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh pr edit "$EXISTING" --body-file ".sync-output/${{ matrix.source }}.pr-body.md"
+            echo "Updated existing PR #$EXISTING"
+            echo "PR: #$EXISTING (updated)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            URL=$(gh pr create \
+              --title "${{ steps.meta.outputs.subject }}" \
+              --body-file ".sync-output/${{ matrix.source }}.pr-body.md" \
+              --head "$BRANCH" \
+              --base "${{ github.event.repository.default_branch }}" \
+              --label upstream-sync)
+            echo "Opened $URL"
+            echo "PR: $URL" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Nothing to do
+        if: steps.meta.outputs.changed != 'true'
+        run: echo "${{ matrix.source }} is already up to date." >> "$GITHUB_STEP_SUMMARY"

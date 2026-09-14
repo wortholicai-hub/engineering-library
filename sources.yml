@@ -1,0 +1,127 @@
+# =============================================================================
+# Engineering Library — Upstream Source Registry
+# =============================================================================
+# This file is the SINGLE SOURCE OF TRUTH for every upstream repository the
+# Engineering Library tracks. Humans read it; automation parses it.
+#
+# Nothing in .github/workflows or scripts/ hardcodes a technology name.
+# Adding a source here (plus `git submodule add`) is all that is required to
+# bring it into the sync system. See docs/adding-a-source.md.
+#
+# Schema is enforced by scripts/registry.mjs (run: npm run validate:registry).
+# -----------------------------------------------------------------------------
+# FIELD REFERENCE
+#   name          Unique slug. Also used in sync branch names.
+#   category      Top-level library section (frontend, backend, ai, ...).
+#   upstream      Canonical HTTPS URL of the OFFICIAL upstream repository.
+#   ref           Upstream branch we track. NOT assumed to be "main" —
+#                 Chart.js tracks "master", shadcn/ui tracks "main".
+#   sync_method   How upstream code enters the library. See docs/architecture.md.
+#                 "git-submodule"  -> pinned gitlink, never vendored/copied.
+#                 "reference-only" -> recorded + monitored, no code ingested.
+#   path          Where the upstream code lives. For git-submodule this MUST
+#                 match the submodule path in .gitmodules (validated).
+#   internal_dir  Where OUR OWN code for this technology lives. The sync
+#                 automation is forbidden from writing anywhere inside it.
+#   license       SPDX id verified against the GitHub API at registration time
+#                 and re-verified on every sync (license regression detection).
+#   license_ok    Whether the license permits our intended use (reference +
+#                 derive internal wrappers with attribution).
+#   enabled       false => excluded from automated sync. Reason must be given.
+#   auto_merge    Always false for upstream code. Sync opens a PR; a human
+#                 merges. Upstream code is never force-merged.
+# =============================================================================
+
+version: 1
+
+defaults:
+  sync_method: git-submodule
+  auto_merge: false
+  # How far back to summarise upstream commits in the generated PR body.
+  pr_commit_preview: 20
+
+sources:
+  # ---------------------------------------------------------------------------
+  - name: shadcn-ui
+    title: shadcn/ui
+    category: frontend
+    upstream: https://github.com/shadcn-ui/ui
+    ref: main
+    sync_method: git-submodule
+    path: frontend/shadcn/upstream/ui
+    internal_dir: frontend/shadcn/templates
+    license: MIT
+    license_ok: true
+    enabled: true
+    auto_merge: false
+    description: >-
+      Composable, accessible React components. Source of truth for component
+      anatomy, Tailwind class conventions and the `cn` utility pattern.
+    used_for:
+      - React component primitives and their accessibility semantics
+      - Tailwind design-token and variant conventions
+      - Reference implementation for our internal wrappers
+
+  # ---------------------------------------------------------------------------
+  - name: chartjs
+    title: Chart.js
+    category: frontend
+    upstream: https://github.com/chartjs/Chart.js
+    ref: master            # NOTE: master, not main.
+    sync_method: git-submodule
+    path: frontend/chartjs/upstream/Chart.js
+    internal_dir: frontend/chartjs/examples
+    license: MIT
+    license_ok: true
+    enabled: true
+    auto_merge: false
+    description: >-
+      Canvas-based charting library. Canonical reference for chart options,
+      scales, plugins and the public typings our presets are built against.
+    used_for:
+      - Chart option/scale/plugin API surface
+      - Upstream TypeScript typings our internal presets conform to
+
+  # ---------------------------------------------------------------------------
+  - name: react-chartjs-2
+    title: react-chartjs-2
+    category: frontend
+    upstream: https://github.com/reactchartjs/react-chartjs-2
+    ref: master            # NOTE: master, not main.
+    sync_method: git-submodule
+    path: frontend/chartjs/upstream/react-chartjs-2
+    internal_dir: frontend/chartjs/examples
+    license: MIT
+    license_ok: true
+    enabled: true
+    auto_merge: false
+    description: >-
+      Official React bindings for Chart.js. Included because Chart.js alone is
+      not directly usable in our React frontends.
+    related_to: chartjs
+    used_for:
+      - React component wrappers (<Line>, <Bar>, <Doughnut>) and their props
+      - Ref/lifecycle handling for charts in React
+
+  # ---------------------------------------------------------------------------
+  # DISABLED — kept in the registry deliberately so the license decision is
+  # recorded and auditable rather than silently forgotten.
+  - name: shadcn-next-template
+    title: shadcn-ui/next-template
+    category: frontend
+    upstream: https://github.com/shadcn-ui/next-template
+    ref: main
+    sync_method: reference-only
+    path: null
+    internal_dir: frontend/shadcn/templates
+    license: NOASSERTION
+    license_ok: false
+    enabled: false
+    auto_merge: false
+    blocked_reason: >-
+      Repository is ARCHIVED and ships NO LICENSE file. Absent an explicit
+      licence grant, default copyright applies and redistribution is not
+      permitted. We therefore do not vendor, submodule or copy any of its
+      code. Recorded here only so the decision is visible and re-checkable.
+    description: >-
+      Archived Next.js starter template from the shadcn-ui org. NOT ingested.

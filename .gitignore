@@ -1,0 +1,13 @@
+node_modules/
+
+# Transient artefacts produced by scripts/sync-upstream.mjs and consumed by
+# the sync workflow to build the commit and PR body. Never committed.
+.sync-output/
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+npm-debug.log*

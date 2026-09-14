@@ -1,0 +1,23 @@
+{
+  "name": "@engineering-library/root",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Engineering Library — tooling that drives upstream synchronisation from sources.yml",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "validate:registry": "node scripts/registry.mjs --validate",
+    "check:upstream": "node scripts/check-upstream.mjs",
+    "sync:upstream": "node scripts/sync-upstream.mjs",
+    "audit:licenses": "node scripts/license-audit.mjs",
+    "docs:render": "node scripts/render-docs.mjs",
+    "docs:check": "node scripts/render-docs.mjs --check",
+    "guard:internal": "node scripts/guard-internal.mjs",
+    "validate": "npm run validate:registry && npm run docs:check && npm run audit:licenses"
+  },
+  "devDependencies": {
+    "yaml": "^2.6.1"
+  }
+}

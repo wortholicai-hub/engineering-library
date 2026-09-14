@@ -1,0 +1,120 @@
+name: Validate
+
+# Continuous validation of the library's invariants.
+#
+#   - the registry parses and agrees with .gitmodules in both directions
+#   - generated documentation is not stale
+#   - every ingested source still carries the licence we recorded
+#   - our internal packages typecheck and pass their tests
+#   - a sync branch has not touched anything except a submodule pointer
+#
+# Also runs weekly so upstream relicensing is caught even when nobody pushes.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 7 * * 1' # Mondays, 07:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  registry:
+    name: Registry, docs and licences
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Submodules ARE checked out here so the licence audit can confirm
+          # the upstream LICENSE files physically exist next to the code.
+          submodules: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Registry schema and .gitmodules consistency
+        run: npm run validate:registry
+
+      - name: Generated docs are up to date
+        run: npm run docs:check
+
+      - name: Licence audit (local files + upstream SPDX)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/license-audit.mjs --remote
+
+      - name: Upstream drift report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo '## Upstream drift'
+            echo ''
+            echo '```'
+            node scripts/check-upstream.mjs
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  guard:
+    name: Sync branches touch upstream pointers only
+    if: startsWith(github.head_ref, 'sync/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Guard internal code
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=50
+          node scripts/guard-internal.mjs --base "origin/${{ github.base_ref }}"
+
+  internal:
+    name: Internal package — ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Our own code. Upstream submodules are deliberately NOT built here:
+        # we track them for reference, we do not ship or compile them.
+        package:
+          - frontend/chartjs/examples
+          - frontend/shadcn/templates
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: ${{ matrix.package }}/package-lock.json
+
+      - name: Install
+        working-directory: ${{ matrix.package }}
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: ${{ matrix.package }}
+        run: npm run typecheck
+
+      - name: Test
+        working-directory: ${{ matrix.package }}
+        run: npm test

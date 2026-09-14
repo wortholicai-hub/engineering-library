@@ -1,0 +1,14 @@
+# Normalise to LF in the repository. The sync workflows run shell on Linux
+# runners, so CRLF committed from a Windows checkout would break them.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.woff  binary
+*.woff2 binary
+
+# Generated — collapse in review diffs.
+package-lock.json        linguist-generated=true
+docs/upstream-sources.md linguist-generated=true
