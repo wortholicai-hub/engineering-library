@@ -188,6 +188,22 @@ Any validation failure aborts before a PR is opened.
 | Sync would touch a non-allow-listed path | job fails | Something is wrong with the sync itself. |
 | Internal tests fail on the new upstream | no PR | The upstream change is a real breaking change; it needs a human. |
 
+### Required repository setting
+
+The sync workflow opens pull requests as GitHub Actions. That is disabled by
+default on new repositories, so it must be enabled once:
+
+> **Settings → Actions → General → Workflow permissions →
+> ☑ Allow GitHub Actions to create and approve pull requests**
+
+Leave *Default workflow permissions* on **Read**: both workflows declare the
+scopes they need (`contents: write`, `pull-requests: write`) at the workflow
+level, so the repository default stays least-privilege.
+
+If the setting is off, the sync still runs, validates and pushes its branch —
+only the final PR creation fails, and the job summary links a pre-filled compare
+view so the PR can be opened by hand.
+
 ### Known limitation
 
 PRs opened with the default `GITHUB_TOKEN` do **not** trigger further workflow

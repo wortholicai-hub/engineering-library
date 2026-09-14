@@ -250,12 +250,30 @@ jobs:
             echo "Updated existing PR #$EXISTING"
             echo "PR: #$EXISTING (updated)" >> "$GITHUB_STEP_SUMMARY"
           else
-            URL=$(gh pr create \
+            if ! URL=$(gh pr create \
               --title "${{ steps.meta.outputs.subject }}" \
               --body-file ".sync-output/${{ matrix.source }}.pr-body.md" \
               --head "$BRANCH" \
               --base "${{ github.event.repository.default_branch }}" \
-              --label upstream-sync)
+              --label upstream-sync 2>&1); then
+              echo "$URL"
+              if echo "$URL" | grep -qi 'not permitted to create or approve pull requests'; then
+                {
+                  echo "### ⚠️ Sync succeeded, but the PR could not be opened"
+                  echo ''
+                  echo "Branch \`$BRANCH\` was validated and pushed successfully."
+                  echo 'GitHub Actions is not allowed to create pull requests in this repository.'
+                  echo ''
+                  echo '**Fix (one-time):** Settings → Actions → General → Workflow permissions →'
+                  echo 'tick **“Allow GitHub Actions to create and approve pull requests”**.'
+                  echo ''
+                  echo "Meanwhile you can open it manually:"
+                  echo "https://github.com/${{ github.repository }}/compare/${{ github.event.repository.default_branch }}...$BRANCH?expand=1"
+                } >> "$GITHUB_STEP_SUMMARY"
+                echo "::error::Actions is not permitted to create pull requests. The sync itself succeeded; see the job summary."
+              fi
+              exit 1
+            fi
             echo "Opened $URL"
             echo "PR: $URL" >> "$GITHUB_STEP_SUMMARY"
           fi
