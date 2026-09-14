@@ -49,7 +49,7 @@ jobs:
           # gitlink from the index and queries the GitHub API. Fast and cheap.
           submodules: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: npm
@@ -116,7 +116,7 @@ jobs:
           git checkout -B "$BASE" "origin/$BASE"
           echo "Starting from $(git rev-parse --short HEAD) on $BASE"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: npm
