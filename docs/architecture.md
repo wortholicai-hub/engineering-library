@@ -234,6 +234,32 @@ It refuses to merge when checks are missing, still running, or failing, and it
 only trusts `dependabot[bot]` and `github-actions[bot]` as authors. Human PRs
 are never touched.
 
+#### One documented exception: PRs that touch `.github/workflows/`
+
+`GITHUB_TOKEN` is a GitHub App token, and GitHub refuses to let an App create
+or update a workflow file without the `workflows` permission. That permission
+**cannot be granted from a workflow's `permissions:` block**, so the sweep
+cannot merge a PR that bumps an action version:
+
+```
+403: refusing to allow a GitHub App to create or update workflow
+     `.github/workflows/auto-merge.yml` without `workflows` permission
+```
+
+This affects **only CI action versions** — never the frontend libraries. npm
+dependency PRs and upstream submodule updates are unaffected.
+
+Two ways to handle it:
+
+| Option | Effect |
+| --- | --- |
+| Do nothing | Action bumps wait for a human click. Actions pinned at `@v4` still receive v4.x updates automatically, because GitHub moves the major tag. |
+| Add an `AUTOMERGE_TOKEN` secret (a PAT with the `workflow` scope) | The sweep picks it up automatically and merges these too. Nothing else changes. |
+
+The sweep **fails the job** when a merge is attempted and rejected, so this
+never hides inside a green run. A PR merely waiting on checks is reported as
+waiting and does not fail anything.
+
 ### Known limitation
 
 PRs opened with the default `GITHUB_TOKEN` do **not** trigger further workflow

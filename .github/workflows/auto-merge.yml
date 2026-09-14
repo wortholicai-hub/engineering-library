@@ -55,7 +55,13 @@ jobs:
 
       - name: Sweep open pull requests
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # AUTOMERGE_TOKEN is OPTIONAL. Without it everything still merges
+          # except PRs that touch .github/workflows/: GITHUB_TOKEN is a GitHub
+          # App token, and GitHub forbids an App from writing workflow files
+          # without the `workflows` permission — which cannot be granted from
+          # a `permissions:` block. Supply a PAT with the `workflow` scope as
+          # the AUTOMERGE_TOKEN secret to cover those too.
+          GITHUB_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           if [ "${{ inputs.dry_run }}" = "true" ]; then

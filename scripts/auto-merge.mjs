@@ -71,6 +71,19 @@ async function evaluateChecks(sha) {
 
 const merged = [];
 const skipped = [];
+/** Merge attempts that failed for a reason other than "not ready yet". */
+const errored = [];
+
+/**
+ * GITHUB_TOKEN is a GitHub App token, and GitHub refuses to let an App create
+ * or update files under .github/workflows without the `workflows` permission —
+ * which cannot be granted through a workflow's `permissions:` block. So a
+ * dependency PR that bumps an action version can never be merged by this
+ * sweep. Detect it precisely and say so, rather than reporting a silent skip.
+ */
+function isWorkflowScopeError(message = '') {
+  return /without `?workflows`? permission/i.test(message);
+}
 
 const pulls = await listOpenPulls(owner, repo);
 console.log(`Auto-merge sweep: ${pulls.length} open pull request(s) in ${repoSlug}\n`);
@@ -120,31 +133,57 @@ for (const summary of pulls) {
     merged.push({ label, reason: checks.reason });
     // Tidy up the source branch; harmless if the repo already auto-deletes.
     await ghWrite('DELETE', `/repos/${owner}/${repo}/git/refs/heads/${summary.head.ref}`);
-  } else {
-    skipped.push({
+    continue;
+  }
+
+  const apiMessage = res.data?.message ?? 'unknown error';
+  if (isWorkflowScopeError(apiMessage)) {
+    errored.push({
       label,
-      reason: `merge API returned ${res.status}: ${res.data?.message ?? 'unknown error'}`,
+      reason:
+        'touches .github/workflows/ — GITHUB_TOKEN lacks the `workflows` permission ' +
+        'and cannot merge it. Merge it yourself, or give auto-merge.yml a PAT with ' +
+        'the `workflow` scope.',
     });
+  } else {
+    errored.push({ label, reason: `merge API returned ${res.status}: ${apiMessage}` });
   }
 }
 
 for (const m of merged) console.log(`  ✓ ${dryRun ? '[dry-run] ' : ''}${m.label}\n      ${m.reason}`);
-for (const s of skipped) console.log(`  · skipped ${s.label}\n      ${s.reason}`);
+for (const s of skipped) console.log(`  · waiting  ${s.label}\n      ${s.reason}`);
+for (const e of errored) console.log(`  ✗ FAILED   ${e.label}\n      ${e.reason}`);
 console.log(
-  `\n${dryRun ? 'Would merge' : 'Merged'} ${merged.length}, left open ${skipped.length}.`,
+  `\n${dryRun ? 'Would merge' : 'Merged'} ${merged.length} · waiting ${skipped.length} · failed ${errored.length}.`,
 );
 
 if (process.env.GITHUB_STEP_SUMMARY) {
   const lines = ['## Auto-merge sweep', ''];
-  lines.push(`${dryRun ? 'Would merge' : 'Merged'}: **${merged.length}** · left open: **${skipped.length}**`, '');
+  lines.push(
+    `${dryRun ? 'Would merge' : 'Merged'}: **${merged.length}** · ` +
+      `waiting on checks: **${skipped.length}** · failed: **${errored.length}**`,
+    '',
+  );
   if (merged.length) {
     lines.push('| Merged | Why |', '| --- | --- |');
     for (const m of merged) lines.push(`| ${m.label} | ${m.reason} |`);
     lines.push('');
   }
   if (skipped.length) {
-    lines.push('| Left open | Why |', '| --- | --- |');
+    lines.push('| Waiting | Why |', '| --- | --- |');
     for (const s of skipped) lines.push(`| ${s.label} | ${s.reason} |`);
+    lines.push('');
+  }
+  if (errored.length) {
+    lines.push('### ⚠️ Could not merge', '', '| Pull request | Reason |', '| --- | --- |');
+    for (const e of errored) lines.push(`| ${e.label} | ${e.reason} |`);
   }
   appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+}
+
+// A PR waiting on checks is normal. A merge that was attempted and REJECTED is
+// not — fail the run so it surfaces instead of sitting silently in a green job.
+if (errored.length) {
+  console.error(`\n${errored.length} pull request(s) could not be merged. See above.`);
+  process.exit(1);
 }
