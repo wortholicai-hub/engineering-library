@@ -148,41 +148,117 @@ ways rather than merely promised:
 
 ## How synchronisation works
 
+### The big picture
+
+Two independent tracks keep the library current. Neither needs a human.
+
+```mermaid
+flowchart LR
+    subgraph PUBLIC["🌍 Public upstream repositories"]
+        U1["shadcn-ui/ui"]
+        U2["chartjs/Chart.js"]
+        U3["reactchartjs/react-chartjs-2"]
+        NPM["npm registry<br/>react · typescript · vitest · tailwind-merge"]
+    end
+
+    subgraph AUTOMATION["⚙️ Automation in this repo"]
+        SYNC["<b>upstream-sync.yml</b><br/>daily 06:00 UTC<br/><i>tracks repositories</i>"]
+        DEPS["<b>Dependabot</b> + <b>auto-merge.yml</b><br/>weekly<br/><i>tracks packages</i>"]
+    end
+
+    subgraph LIB["📚 Engineering Library · main"]
+        UP["<b>upstream/</b><br/>pinned submodules<br/>read-only"]
+        INT["<b>templates/ · examples/</b><br/>our code<br/>editable"]
+    end
+
+    DEV["Developers<br/>and AI agents"]
+
+    U1 & U2 & U3 --> SYNC
+    NPM --> DEPS
+    SYNC -->|"moves the commit pointer"| UP
+    DEPS -->|"bumps package versions"| INT
+    UP -.->|"API reference"| DEV
+    INT ==>|"reuse this"| DEV
+
+    style UP fill:#fff3cd,stroke:#d39e00,color:#000
+    style INT fill:#d4edda,stroke:#28a745,color:#000
+    style SYNC fill:#cce5ff,stroke:#0066cc,color:#000
+    style DEPS fill:#cce5ff,stroke:#0066cc,color:#000
 ```
-          ┌──────────────────────────────────────────────┐
-          │  UPSTREAM  (shadcn-ui/ui, chartjs/Chart.js…) │
-          └───────────────────────┬──────────────────────┘
-                                  │ new commits land
-                                  ▼
-   ┌──────────────────────────────────────────────────────────────┐
-   │ 1. DETECT   .github/workflows/upstream-sync.yml (daily 06:00) │
-   │    reads sources.yml → compares our pinned SHA with the live  │
-   │    tip of the tracked branch via the GitHub compare API       │
-   └───────────────────────┬──────────────────────────────────────┘
-                           │ behind?
-                           ▼
-   ┌──────────────────────────────────────────────────────────────┐
-   │ 2. SYNC     scripts/sync-upstream.mjs                         │
-   │    moves ONLY the submodule pointer to the new upstream SHA   │
-   └───────────────────────┬──────────────────────────────────────┘
-                           ▼
-   ┌──────────────────────────────────────────────────────────────┐
-   │ 3. VALIDATE  (all must pass, or no PR is opened)              │
-   │    • registry schema ↔ .gitmodules agree                      │
-   │    • guard: only registered submodule pointers changed        │
-   │    • internal tree hash identical before/after                │
-   │    • upstream licence re-verified AT THE NEW COMMIT           │
-   │    • internal packages typecheck + tests pass                 │
-   └───────────────────────┬──────────────────────────────────────┘
-                           ▼
-   ┌──────────────────────────────────────────────────────────────┐
-   │ 4. PUBLISH   per the source's `update_strategy`:              │
-   │    auto          → commit straight to main   (current default)│
-   │    pull-request  → open a PR describing the change            │
-   └───────────────────────┬──────────────────────────────────────┘
-                           ▼
-                 main is up to date
+
+> 🟡 **Yellow = upstream, never edited.** 🟢 **Green = ours, safe to edit.**
+> The two never overlap, and the sync is physically incapable of writing into green.
+
+### The upstream sync pipeline, step by step
+
+```mermaid
+flowchart TD
+    START(["⏰ Daily 06:00 UTC<br/>or manual run"]) --> READ["📖 Read <b>sources.yml</b><br/>the registry drives everything"]
+    READ --> DETECT["🔍 <b>DETECT</b><br/>compare our pinned SHA against<br/>the live tip of the tracked branch"]
+
+    DETECT --> BEHIND{"Behind<br/>upstream?"}
+    BEHIND -->|No| DONE_OK(["✅ Already up to date<br/>nothing to do"])
+    BEHIND -->|Yes| BUMP["📌 <b>SYNC</b><br/>move ONLY the submodule pointer<br/>to the new upstream commit"]
+
+    BUMP --> GATE
+
+    subgraph GATE["🛡️ VALIDATION GATE — every check must pass"]
+        direction TB
+        V1["Registry ↔ .gitmodules agree"]
+        V2["Guard: only registered<br/>submodule pointers changed"]
+        V3["Internal code hash<br/>identical before &amp; after"]
+        V4["Licence re-verified<br/>AT THE NEW COMMIT"]
+        V5["Our typecheck + tests pass<br/>against the new upstream"]
+        V1 --> V2 --> V3 --> V4 --> V5
+    end
+
+    GATE --> PASS{"All checks<br/>passed?"}
+    PASS -->|"❌ No"| STOP(["🛑 STOP<br/>nothing is published<br/>failure visible in Actions"])
+    PASS -->|"✅ Yes"| STRATEGY{"<b>update_strategy</b><br/>in sources.yml"}
+
+    STRATEGY -->|"<b>auto</b><br/>(current setting)"| PUSH["🚀 Commit straight to <b>main</b>"]
+    STRATEGY -->|"pull-request"| PR["📬 Open a PR<br/>old SHA → new SHA, commit list,<br/>dependency impact, licence result"]
+
+    PUSH --> REVALIDATE["🔁 Dispatch <b>Validate</b> on main<br/><i>token pushes don't self-trigger CI</i>"]
+    PR --> HUMAN["👤 Human reviews and merges"]
+    REVALIDATE --> FINAL(["📚 Library up to date"])
+    HUMAN --> FINAL
+
+    style GATE fill:#fff9e6,stroke:#d39e00,color:#000
+    style STOP fill:#f8d7da,stroke:#dc3545,color:#000
+    style PUSH fill:#d4edda,stroke:#28a745,color:#000
+    style FINAL fill:#d4edda,stroke:#28a745,color:#000
+    style DONE_OK fill:#d4edda,stroke:#28a745,color:#000
 ```
+
+**The gate is the whole point.** Because `auto` removes the human reviewer,
+nothing reaches `main` unless every check above passes. If upstream relicenses,
+rewrites history, or breaks our code, the pipeline stops and says why.
+
+### Why an upstream update can never destroy our code
+
+```mermaid
+flowchart LR
+    SYNC["Upstream sync"]
+    GITLINK["Writes a 40-byte<br/>commit pointer"]
+    UPDIR["upstream/Chart.js"]
+    INTDIR["examples/<br/><i>our presets, our tests</i>"]
+
+    SYNC --> GITLINK --> UPDIR
+
+    SYNC -.->|"blocked: structurally impossible"| INTDIR
+    SYNC -.->|"blocked: guard-internal.mjs"| INTDIR
+    SYNC -.->|"blocked: tree fingerprint"| INTDIR
+
+    style UPDIR fill:#fff3cd,stroke:#d39e00,color:#000
+    style INTDIR fill:#d4edda,stroke:#28a745,color:#000
+    style SYNC fill:#cce5ff,stroke:#0066cc,color:#000
+```
+
+Three independent defences, not one: a submodule bump *physically* cannot touch
+a sibling directory; the guard script rejects any changed path that isn't a
+registered submodule pointer; and the workflow hashes our code before and after
+the bump and aborts on any difference.
 
 **This library updates itself.** All three frontend sources run
 `update_strategy: auto`, so a validated upstream change lands on `main` with no
@@ -227,6 +303,51 @@ Two separate concerns, deliberately handled by two different mechanisms:
 
 Dependabot's `gitsubmodule` ecosystem is intentionally **not** enabled: it would
 bump pointers without the licence check, internal-code guard or validation gate.
+
+### How a dependency update merges itself
+
+Dependabot has no direct-push mode — it always opens a PR. So something has to
+merge it, and `auto-merge.yml` only does so once CI is genuinely green.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant D as Dependabot
+    participant PR as Pull request
+    participant CI as Validate workflow
+    participant AM as auto-merge.yml
+    participant M as main
+
+    D->>PR: Open grouped PR<br/>(e.g. react + react-dom + types)
+    PR->>CI: Trigger checks
+    CI->>CI: Registry · docs · licences
+    CI->>CI: Typecheck + tests on BOTH packages
+    CI-->>PR: Report result
+
+    alt All checks passed
+        CI->>AM: Completion triggers the sweep
+        AM->>PR: Verify author is a trusted bot
+        AM->>PR: Verify no check pending or failing
+        AM->>M: Squash-merge and delete branch
+        AM->>CI: Dispatch Validate on main
+        Note over M: Updated with no human step
+    else Any check failing or still running
+        AM-->>PR: Leave open, report why
+        Note over PR: Waits for the hourly sweep
+    end
+```
+
+The sweep refuses to merge when checks are missing, pending or failing, only
+trusts `dependabot[bot]` and `github-actions[bot]`, and **never touches a
+human-authored PR**.
+
+> **One documented exception.** `GITHUB_TOKEN` is a GitHub App token, and GitHub
+> forbids an App from writing `.github/workflows/**` without the `workflows`
+> permission — which cannot be granted from a `permissions:` block. So PRs that
+> bump a **GitHub Action version** cannot be auto-merged. This never affects the
+> frontend libraries. Add a PAT with the `workflow` scope as an
+> `AUTOMERGE_TOKEN` secret to cover those too; the workflow already uses it when
+> present.
 
 ---
 

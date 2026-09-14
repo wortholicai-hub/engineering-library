@@ -45,6 +45,31 @@ in the `internal_dir`, or to open a PR against the real upstream project.
 
 ## 3. How to answer a request
 
+```mermaid
+flowchart TD
+    REQ(["Request arrives<br/><i>e.g. 'I need a dashboard with charts'</i>"])
+    REQ --> SEARCH["Search the internal directories<br/><b>frontend/*/templates/</b> · <b>frontend/*/examples/</b>"]
+
+    SEARCH --> EXISTS{"Does it<br/>already exist?"}
+    EXISTS -->|"Yes"| USE(["Import and use it<br/><b>STOP HERE</b>"])
+    EXISTS -->|"Nearly"| EXTEND["Extend it IN PLACE<br/>in the internal directory<br/>+ add a test beside the existing ones"]
+    EXISTS -->|"No"| READ["Read the upstream submodule<br/>for API truth — it is pinned to the<br/>exact version in use"]
+
+    READ --> WRITE["Write it in the correct <b>internal_dir</b><br/>following the conventions already there"]
+    EXTEND --> TEST
+    WRITE --> TEST["Run the package tests"]
+    TEST --> DONE(["Done — the next agent<br/>now finds it at step 1"])
+
+    EDIT{"Tempted to edit<br/>something in <b>upstream/</b>?"}
+    READ -.-> EDIT
+    EDIT -->|"Always"| NEVER(["NEVER. It is a pinned submodule —<br/>the edit cannot be committed.<br/>Write a wrapper instead."])
+
+    style USE fill:#d4edda,stroke:#28a745,color:#000
+    style DONE fill:#d4edda,stroke:#28a745,color:#000
+    style NEVER fill:#f8d7da,stroke:#dc3545,color:#000
+    style READ fill:#fff3cd,stroke:#d39e00,color:#000
+```
+
 Work through this in order. Stop at the first step that satisfies the request.
 
 1. **Search the internal directories.** `frontend/*/templates/`,
