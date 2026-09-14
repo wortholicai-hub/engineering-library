@@ -23,6 +23,7 @@ const REGISTRY_PATH = path.join(REPO_ROOT, 'sources.yml');
 const GITMODULES_PATH = path.join(REPO_ROOT, '.gitmodules');
 
 const VALID_SYNC_METHODS = new Set(['git-submodule', 'reference-only']);
+const VALID_UPDATE_STRATEGIES = new Set(['auto', 'pull-request']);
 const REQUIRED_FIELDS = [
   'name',
   'title',
@@ -30,6 +31,7 @@ const REQUIRED_FIELDS = [
   'upstream',
   'ref',
   'sync_method',
+  'update_strategy',
   'internal_dir',
   'license',
   'license_ok',
@@ -153,9 +155,26 @@ export function validateRegistry() {
       problems.push(`${id}: ${err.message}`);
     }
 
-    // Upstream code must never be auto-merged.
-    if (s.auto_merge === true) {
-      problems.push(`${id}: auto_merge must be false — upstream changes require review`);
+    if (!VALID_UPDATE_STRATEGIES.has(s.update_strategy)) {
+      problems.push(
+        `${id}: invalid update_strategy \`${s.update_strategy}\` ` +
+          `(expected one of: ${[...VALID_UPDATE_STRATEGIES].join(', ')})`,
+      );
+    }
+
+    // `auto` removes the human review step, so the validation gate becomes the
+    // only safeguard. A source may only run unattended if its licence was
+    // cleared AND it declares an internal_dir whose tests can act as that gate.
+    if (s.update_strategy === 'auto' && s.enabled === true) {
+      if (s.license_ok !== true) {
+        problems.push(`${id}: update_strategy=auto requires license_ok: true`);
+      }
+      if (!s.internal_dir) {
+        problems.push(
+          `${id}: update_strategy=auto requires an internal_dir — its tests are ` +
+            `the only gate protecting the default branch`,
+        );
+      }
     }
 
     // A source may only be enabled if its licence was cleared.

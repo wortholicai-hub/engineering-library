@@ -71,7 +71,8 @@ git add <category>/<technology>/upstream/<name>
     license: MIT                          # SPDX id verified in step 0
     license_ok: true
     enabled: true
-    auto_merge: false                     # always false
+    update_strategy: auto                 # auto -> lands on main once CI passes
+                                          # pull-request -> a human merges it
     description: >-
       One or two sentences: what this is and why it is in the library.
     used_for:                             # read by AI agents — be concrete
@@ -79,7 +80,14 @@ git add <category>/<technology>/upstream/<name>
 ```
 
 Required fields: `name`, `title`, `category`, `upstream`, `ref`, `sync_method`,
-`internal_dir`, `license`, `license_ok`, `enabled`.
+`update_strategy`, `internal_dir`, `license`, `license_ok`, `enabled`.
+
+**Choosing `update_strategy`.** `auto` means validated updates land on `main`
+with no human step — appropriate when the internal package's tests genuinely
+exercise the dependency. If the tests are thin, or the source is high-risk,
+start with `pull-request` and switch to `auto` once the gate is trustworthy.
+CI rejects `auto` on a source with no `internal_dir`, because then there would
+be no gate at all.
 
 ---
 

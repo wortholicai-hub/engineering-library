@@ -1,0 +1,65 @@
+name: Auto-merge
+
+# Merges bot-authored dependency pull requests once every check has passed.
+#
+# This is what makes the library update itself with no manual GitHub work:
+# Dependabot always opens a PR (it has no direct-push mode), so something has
+# to merge it. CI is the only gate, so scripts/auto-merge.mjs refuses to merge
+# anything whose checks are missing, pending or failing.
+#
+# Upstream submodule updates do NOT come through here — sources with
+# `update_strategy: auto` in sources.yml are committed straight to the default
+# branch by upstream-sync.yml.
+
+on:
+  # Re-sweep as soon as a validation run finishes, so a PR merges minutes
+  # after its checks go green rather than waiting for the next schedule.
+  workflow_run:
+    workflows: [Validate]
+    types: [completed]
+  # Safety net: catches anything the event-driven path missed.
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Report merge decisions without merging'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+concurrency:
+  group: auto-merge
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    name: Merge eligible dependency PRs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Sweep open pull requests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            node scripts/auto-merge.mjs --dry-run
+          else
+            node scripts/auto-merge.mjs
+          fi

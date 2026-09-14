@@ -176,17 +176,24 @@ ways rather than merely promised:
    └───────────────────────┬──────────────────────────────────────┘
                            ▼
    ┌──────────────────────────────────────────────────────────────┐
-   │ 4. PULL REQUEST  one per source, branch sync/<name>/<sha>     │
-   │    body states: upstream repo, old SHA → new SHA, commit      │
-   │    list, whether dependencies changed, licence result,        │
-   │    validation results                                         │
+   │ 4. PUBLISH   per the source's `update_strategy`:              │
+   │    auto          → commit straight to main   (current default)│
+   │    pull-request  → open a PR describing the change            │
    └───────────────────────┬──────────────────────────────────────┘
                            ▼
-                 human review → merge
+                 main is up to date
 ```
 
-**Nothing merges itself.** `auto_merge` is `false` for every source and the
-registry validator rejects any attempt to set it `true`.
+**This library updates itself.** All three frontend sources run
+`update_strategy: auto`, so a validated upstream change lands on `main` with no
+manual step. Dependency PRs from Dependabot are merged by `auto-merge.yml` once
+their checks pass.
+
+> **What this means:** with `auto`, **the test suite is the only gate** between
+> an upstream change and `main`. The registry enforces that a source may only
+> run `auto` if it declares an `internal_dir` — there must be tests to do the
+> gating. To put a human back in the loop for any single source, set its
+> `update_strategy` to `pull-request`. Nothing else changes.
 
 ### Failure modes that deliberately stop the pipeline
 
@@ -213,9 +220,9 @@ Two separate concerns, deliberately handled by two different mechanisms:
 
 | What | Managed by | Cadence |
 | --- | --- | --- |
-| **Our internal packages'** dependencies (`chart.js`, `react-chartjs-2`, `react`, `typescript`, `vitest`, `clsx`, `tailwind-merge`, …) | **Dependabot** — [`.github/dependabot.yml`](.github/dependabot.yml), grouped so related packages bump together | weekly |
-| **Our GitHub Actions** versions | Dependabot (`github-actions` ecosystem) | weekly |
-| **Upstream submodule pointers** | `upstream-sync.yml` (licence re-verification + guard + validation gate) | daily |
+| **Our internal packages'** dependencies (`chart.js`, `react-chartjs-2`, `react`, `typescript`, `vitest`, `clsx`, `tailwind-merge`, …) | **Dependabot** opens grouped PRs — [`.github/dependabot.yml`](.github/dependabot.yml) — and [`auto-merge.yml`](.github/workflows/auto-merge.yml) merges them once checks pass | weekly |
+| **Our GitHub Actions** versions | Dependabot (`github-actions` ecosystem), same auto-merge path | weekly |
+| **Upstream submodule pointers** | `upstream-sync.yml` (licence re-verification + guard + validation gate), committed straight to `main` | daily |
 | **Dependencies *inside* upstream submodules** | Not ours to manage — upstream owns them. Changes are *reported* in every sync PR ("Did dependencies change?"). | reported |
 
 Dependabot's `gitsubmodule` ecosystem is intentionally **not** enabled: it would
@@ -289,7 +296,7 @@ registry.
 | --- | --- |
 | anything under `*/upstream/**` | Upstream's code. Only the sync workflow moves these pointers. |
 | `docs/upstream-sources.md` | Generated. Edit `sources.yml` and run `npm run docs:render`. |
-| `sources.yml` — `auto_merge` | Must stay `false`. CI rejects `true`. |
+| `sources.yml` — `update_strategy` | Change deliberately. `auto` means updates land on `main` unreviewed, gated only by tests. |
 | `.gitmodules` by hand | Use `git submodule add/deinit` so it stays consistent with the registry. |
 
 ---

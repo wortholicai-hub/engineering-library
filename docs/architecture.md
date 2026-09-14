@@ -126,7 +126,8 @@ Consequences:
 
 | Invariant | Rationale |
 | --- | --- |
-| `auto_merge` must be `false` | Upstream code is never force-merged. |
+| `update_strategy` ∈ {`auto`, `pull-request`} | Explicit, per-source choice of how updates land. |
+| `update_strategy: auto` requires `license_ok` **and** an `internal_dir` | Unattended updates have no human reviewer, so a source may only run `auto` if it has a test suite to act as the gate. |
 | `enabled: true` requires `license_ok: true` | No ingesting code we have no licence for. |
 | `enabled: false` requires `blocked_reason` | Rejections stay auditable. |
 | `path` must sit under an `upstream/` directory | Keeps the read-only boundary unambiguous. |
@@ -168,16 +169,20 @@ be violated quietly.
 branch via the GitHub compare API. No submodule checkout, so it is fast and
 cheap. Emits a job matrix of outdated sources.
 
-**Job 2 — `sync`** (one job per outdated source, in parallel):
+**Job 2 — `sync`** (one job per outdated source, `max-parallel: 1` so that
+`auto` sources cannot race each other pushing to the default branch):
 
 1. initialise **only** the affected submodule
 2. hash the internal tree (pre-image)
 3. move the pointer to the new upstream SHA
 4. **validation gate** — guard, fingerprint comparison, registry validation,
    licence re-verification at the new commit, internal typecheck and tests
-5. commit to `sync/<source>/<short-sha>`, push, open or update a PR
+5. commit, then either push to the default branch (`auto`) or open a PR
+   (`pull-request`), per the source's `update_strategy`
 
-Any validation failure aborts before a PR is opened.
+Any validation failure aborts before anything is published. The push to the
+default branch rebases and retries on rejection, so a concurrent update never
+loses work.
 
 ### Refusals
 
@@ -188,21 +193,46 @@ Any validation failure aborts before a PR is opened.
 | Sync would touch a non-allow-listed path | job fails | Something is wrong with the sync itself. |
 | Internal tests fail on the new upstream | no PR | The upstream change is a real breaking change; it needs a human. |
 
-### Required repository setting
+### Update strategies
 
-The sync workflow opens pull requests as GitHub Actions. That is disabled by
-default on new repositories, so it must be enabled once:
+Each source chooses, in the registry, how a validated update reaches `main`:
 
-> **Settings → Actions → General → Workflow permissions →
-> ☑ Allow GitHub Actions to create and approve pull requests**
+| `update_strategy` | Behaviour | Human step |
+| --- | --- | --- |
+| `auto` (current default) | Validation gate runs, then the sync commit is pushed **straight to the default branch** | none |
+| `pull-request` | Validation gate runs, then a PR is opened | merge the PR |
 
-Leave *Default workflow permissions* on **Read**: both workflows declare the
-scopes they need (`contents: write`, `pull-requests: write`) at the workflow
-level, so the repository default stays least-privilege.
+All three frontend sources currently run `auto`, so the library keeps itself
+current with no manual GitHub work.
 
-If the setting is off, the sync still runs, validates and pushes its branch —
-only the final PR creation fails, and the job summary links a pre-filled compare
-view so the PR can be opened by hand.
+**The consequence is deliberate and worth stating plainly: with `auto`, the
+test suite is the only thing between an upstream change and `main`.** That is
+why `registry.mjs` refuses to let a source run `auto` unless it declares an
+`internal_dir` — there must be tests to act as the gate — and why
+`frontend/chartjs/examples` carries a React rendering suite that exercises
+`react-chartjs-2` for real rather than only testing pure functions.
+
+To put a human back in the loop for one source, change its `update_strategy`
+to `pull-request`. Nothing else needs to change.
+
+`auto` also sidesteps a repository setting: opening PRs as GitHub Actions
+requires *Settings → Actions → General → Workflow permissions → Allow GitHub
+Actions to create and approve pull requests*, which is off by default on new
+repositories. Committing directly needs only `contents: write`, which the
+workflow declares itself. If you switch a source to `pull-request` and that
+setting is off, the sync still validates and pushes its branch — only the PR
+creation fails, and the job summary explains how to fix it.
+
+Leave *Default workflow permissions* on **Read**: every workflow declares the
+scopes it needs, so the repository default stays least-privilege.
+
+### Dependency PRs
+
+Dependabot has no direct-push mode — it always opens a PR. `auto-merge.yml`
+therefore sweeps open bot PRs and merges those whose checks have all passed.
+It refuses to merge when checks are missing, still running, or failing, and it
+only trusts `dependabot[bot]` and `github-actions[bot]` as authors. Human PRs
+are never touched.
 
 ### Known limitation
 

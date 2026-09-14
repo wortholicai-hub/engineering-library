@@ -92,6 +92,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Sources with update_strategy=auto commit straight to the default
+      # branch, so they must not race each other pushing to it.
+      max-parallel: 1
       matrix: ${{ fromJson(needs.detect.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
@@ -155,6 +158,7 @@ jobs:
             echo "to=$(jq -r .to "$FILE")"
             echo "ahead=$(jq -r .aheadBy "$FILE")"
             echo "deps=$(jq -r .dependenciesChanged "$FILE")"
+            echo "strategy=$(jq -r .updateStrategy "$FILE")"
           } >> "$GITHUB_OUTPUT"
 
       # ---- VALIDATION GATE -------------------------------------------------
@@ -223,60 +227,93 @@ jobs:
           "
 
       # ---- PUBLISH ---------------------------------------------------------
+      # Reached only when every validation step above passed.
 
-      - name: Commit and push sync branch
+      - name: Create the sync commit
         if: steps.meta.outputs.changed == 'true'
         run: |
           git config user.name  'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git checkout -b "${{ steps.meta.outputs.branch }}"
           git add -- "${{ steps.src.outputs.path }}" docs/upstream-sources.md
           git commit -m "${{ steps.meta.outputs.subject }}" \
-                     -m "Upstream: ${{ steps.src.outputs.title }}" \
+                     -m "Upstream: ${{ steps.src.outputs.title }} (${{ steps.meta.outputs.ahead }} new commit(s))" \
                      -m "From: ${{ steps.meta.outputs.from }}" \
                      -m "To:   ${{ steps.meta.outputs.to }}" \
-                     -m "Opened by .github/workflows/upstream-sync.yml"
-          git push --force-with-lease origin "${{ steps.meta.outputs.branch }}"
+                     -m "Upstream deps changed: ${{ steps.meta.outputs.deps }}" \
+                     -m "Validated and committed by .github/workflows/upstream-sync.yml"
 
-      - name: Open or update pull request
-        if: steps.meta.outputs.changed == 'true'
+      # --- update_strategy: auto -> land straight on the default branch ------
+      - name: Push to default branch (update_strategy=auto)
+        if: steps.meta.outputs.changed == 'true' && steps.meta.outputs.strategy == 'auto'
+        run: |
+          BASE="${{ github.event.repository.default_branch }}"
+          # Another source in this matrix may have landed a commit since we
+          # checked out. Rebase and retry rather than failing the run.
+          for attempt in 1 2 3 4 5; do
+            if git push origin "HEAD:$BASE"; then
+              echo "Pushed to $BASE on attempt $attempt"
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt) — rebasing onto origin/$BASE"
+            git fetch origin "$BASE"
+            git rebase "origin/$BASE" || { git rebase --abort; exit 1; }
+            sleep 3
+          done
+          echo "::error::Could not push to $BASE after 5 attempts."
+          exit 1
+
+      - name: Report auto update
+        if: steps.meta.outputs.changed == 'true' && steps.meta.outputs.strategy == 'auto'
+        run: |
+          {
+            echo "### ✅ ${{ steps.src.outputs.title }} updated automatically"
+            echo ''
+            echo "\`${{ steps.meta.outputs.from }}\` → \`${{ steps.meta.outputs.to }}\`"
+            echo "(${{ steps.meta.outputs.ahead }} upstream commit(s), validation passed)"
+            echo ''
+            echo "Committed directly to \`${{ github.event.repository.default_branch }}\` because"
+            echo "this source is configured \`update_strategy: auto\` in sources.yml."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # --- update_strategy: pull-request -> open a PR for review -------------
+      - name: Push branch and open pull request (update_strategy=pull-request)
+        if: steps.meta.outputs.changed == 'true' && steps.meta.outputs.strategy == 'pull-request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BRANCH="${{ steps.meta.outputs.branch }}"
+          git push --force-with-lease origin "HEAD:refs/heads/$BRANCH"
           EXISTING=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
           if [ -n "$EXISTING" ]; then
             gh pr edit "$EXISTING" --body-file ".sync-output/${{ matrix.source }}.pr-body.md"
-            echo "Updated existing PR #$EXISTING"
             echo "PR: #$EXISTING (updated)" >> "$GITHUB_STEP_SUMMARY"
-          else
-            if ! URL=$(gh pr create \
-              --title "${{ steps.meta.outputs.subject }}" \
-              --body-file ".sync-output/${{ matrix.source }}.pr-body.md" \
-              --head "$BRANCH" \
-              --base "${{ github.event.repository.default_branch }}" \
-              --label upstream-sync 2>&1); then
-              echo "$URL"
-              if echo "$URL" | grep -qi 'not permitted to create or approve pull requests'; then
-                {
-                  echo "### ⚠️ Sync succeeded, but the PR could not be opened"
-                  echo ''
-                  echo "Branch \`$BRANCH\` was validated and pushed successfully."
-                  echo 'GitHub Actions is not allowed to create pull requests in this repository.'
-                  echo ''
-                  echo '**Fix (one-time):** Settings → Actions → General → Workflow permissions →'
-                  echo 'tick **“Allow GitHub Actions to create and approve pull requests”**.'
-                  echo ''
-                  echo "Meanwhile you can open it manually:"
-                  echo "https://github.com/${{ github.repository }}/compare/${{ github.event.repository.default_branch }}...$BRANCH?expand=1"
-                } >> "$GITHUB_STEP_SUMMARY"
-                echo "::error::Actions is not permitted to create pull requests. The sync itself succeeded; see the job summary."
-              fi
-              exit 1
-            fi
-            echo "Opened $URL"
-            echo "PR: $URL" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
+          if ! URL=$(gh pr create \
+            --title "${{ steps.meta.outputs.subject }}" \
+            --body-file ".sync-output/${{ matrix.source }}.pr-body.md" \
+            --head "$BRANCH" \
+            --base "${{ github.event.repository.default_branch }}" \
+            --label upstream-sync 2>&1); then
+            echo "$URL"
+            if echo "$URL" | grep -qi 'not permitted to create or approve pull requests'; then
+              {
+                echo "### ⚠️ Sync validated, but the PR could not be opened"
+                echo ''
+                echo "Branch \`$BRANCH\` was validated and pushed successfully."
+                echo 'Enable: Settings → Actions → General → Workflow permissions →'
+                echo '“Allow GitHub Actions to create and approve pull requests”.'
+                echo ''
+                echo "Or switch this source to \`update_strategy: auto\` in sources.yml"
+                echo 'to skip pull requests entirely.'
+                echo ''
+                echo "https://github.com/${{ github.repository }}/compare/${{ github.event.repository.default_branch }}...$BRANCH?expand=1"
+              } >> "$GITHUB_STEP_SUMMARY"
+              echo "::error::Actions is not permitted to create pull requests; see the job summary."
+            fi
+            exit 1
+          fi
+          echo "PR: $URL" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Nothing to do
         if: steps.meta.outputs.changed != 'true'

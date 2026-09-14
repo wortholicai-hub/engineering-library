@@ -29,6 +29,58 @@ export async function gh(pathname, { raw = false } = {}) {
   return raw ? res.text() : res.json();
 }
 
+/**
+ * Write request (PUT/POST/PATCH/DELETE).
+ *
+ * Returns { ok, status, data } rather than throwing, because callers such as
+ * the auto-merge sweep need to distinguish "not mergeable yet" (retry later)
+ * from a hard failure, and must never abort the whole sweep over one PR.
+ */
+export async function ghWrite(method, pathname, body) {
+  const headers = {
+    Accept: 'application/vnd.github+json',
+    'Content-Type': 'application/json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': 'engineering-library-sync',
+  };
+  const t = token();
+  if (t) headers.Authorization = `Bearer ${t}`;
+
+  const res = await fetch(`${API}${pathname}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const text = await res.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = { raw: text };
+  }
+  return { ok: res.ok, status: res.status, data };
+}
+
+/** All check-runs for a commit, flattened. */
+export async function getCheckRuns(owner, repo, sha) {
+  const data = await gh(`/repos/${owner}/${repo}/commits/${sha}/check-runs?per_page=100`);
+  return data?.check_runs ?? [];
+}
+
+/** Legacy commit statuses (some tools still report here rather than as checks). */
+export async function getCombinedStatus(owner, repo, sha) {
+  const data = await gh(`/repos/${owner}/${repo}/commits/${sha}/status`);
+  return data ?? { state: 'pending', statuses: [] };
+}
+
+export async function listOpenPulls(owner, repo) {
+  return (await gh(`/repos/${owner}/${repo}/pulls?state=open&per_page=100`)) ?? [];
+}
+
+export async function getPull(owner, repo, number) {
+  return gh(`/repos/${owner}/${repo}/pulls/${number}`);
+}
+
 /** Current tip commit of `ref` on owner/repo. */
 export async function getRefHead(owner, repo, ref) {
   const data = await gh(`/repos/${owner}/${repo}/commits/${encodeURIComponent(ref)}`);

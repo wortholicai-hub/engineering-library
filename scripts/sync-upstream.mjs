@@ -195,6 +195,7 @@ if (isMain) {
           title: source.title,
           path: source.path,
           internal_dir: source.internal_dir,
+          updateStrategy: source.update_strategy,
           from: check.current,
           to: check.latest,
           aheadBy: check.aheadBy,

@@ -28,16 +28,23 @@
 #   license_ok    Whether the license permits our intended use (reference +
 #                 derive internal wrappers with attribution).
 #   enabled       false => excluded from automated sync. Reason must be given.
-#   auto_merge    Always false for upstream code. Sync opens a PR; a human
-#                 merges. Upstream code is never force-merged.
+#   update_strategy  How a detected upstream update reaches the default branch:
+#                 "auto"         -> run the full validation gate, then commit
+#                                   straight to the default branch. No human
+#                                   step. The validation gate is the ONLY
+#                                   safeguard, so it must be meaningful.
+#                 "pull-request" -> open a PR and wait for a human to merge.
+#                 Switching a source to "pull-request" is the way to put a
+#                 human back in the loop for a risky dependency.
 # =============================================================================
 
 version: 1
 
 defaults:
   sync_method: git-submodule
-  auto_merge: false
-  # How far back to summarise upstream commits in the generated PR body.
+  # Fully autonomous by default: detect -> validate -> commit to main.
+  update_strategy: auto
+  # How far back to summarise upstream commits in the commit/PR body.
   pr_commit_preview: 20
 
 sources:
@@ -53,7 +60,7 @@ sources:
     license: MIT
     license_ok: true
     enabled: true
-    auto_merge: false
+    update_strategy: auto
     description: >-
       Composable, accessible React components. Source of truth for component
       anatomy, Tailwind class conventions and the `cn` utility pattern.
@@ -74,7 +81,7 @@ sources:
     license: MIT
     license_ok: true
     enabled: true
-    auto_merge: false
+    update_strategy: auto
     description: >-
       Canvas-based charting library. Canonical reference for chart options,
       scales, plugins and the public typings our presets are built against.
@@ -94,7 +101,7 @@ sources:
     license: MIT
     license_ok: true
     enabled: true
-    auto_merge: false
+    update_strategy: auto
     description: >-
       Official React bindings for Chart.js. Included because Chart.js alone is
       not directly usable in our React frontends.
@@ -117,7 +124,7 @@ sources:
     license: NOASSERTION
     license_ok: false
     enabled: false
-    auto_merge: false
+    update_strategy: pull-request
     blocked_reason: >-
       Repository is ARCHIVED and ships NO LICENSE file. Absent an explicit
       licence grant, default copyright applies and redistribution is not
