@@ -1,0 +1,447 @@
+﻿2026-09-14T13:48:07.4112335Z Current runner version: '2.337.0'
+2026-09-14T13:48:07.4150761Z ##[group]Runner Image Provisioner
+2026-09-14T13:48:07.4152350Z Hosted Compute Agent
+2026-09-14T13:48:07.4153403Z Version: 20260828.587
+2026-09-14T13:48:07.4154710Z Commit: abac92662cab4cc7352de4f9f9d2e2419aad9c29
+2026-09-14T13:48:07.4156107Z Build Date: 2026-08-28T16:44:25Z
+2026-09-14T13:48:07.4157258Z Worker ID: {dc972c4b-1457-482e-873c-ce85ec9f2a36}
+2026-09-14T13:48:07.4158649Z Azure Region: eastus
+2026-09-14T13:48:07.4159658Z ##[endgroup]
+2026-09-14T13:48:07.4162621Z ##[group]Operating System
+2026-09-14T13:48:07.4163725Z Ubuntu
+2026-09-14T13:48:07.4164656Z 24.04.5
+2026-09-14T13:48:07.4165480Z LTS
+2026-09-14T13:48:07.4166301Z ##[endgroup]
+2026-09-14T13:48:07.4167318Z ##[group]Runner Image
+2026-09-14T13:48:07.4168427Z Image: ubuntu-24.04
+2026-09-14T13:48:07.4169548Z Version: 20260907.300.1
+2026-09-14T13:48:07.4172039Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260907.300/images/ubuntu/Ubuntu2404-Readme.md
+2026-09-14T13:48:07.4175710Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260907.300
+2026-09-14T13:48:07.4177550Z ##[endgroup]
+2026-09-14T13:48:07.4179892Z ##[group]GITHUB_TOKEN Permissions
+2026-09-14T13:48:07.4183260Z Contents: write
+2026-09-14T13:48:07.4184366Z Metadata: read
+2026-09-14T13:48:07.4185545Z PullRequests: write
+2026-09-14T13:48:07.4186644Z ##[endgroup]
+2026-09-14T13:48:07.4189816Z Secret source: Actions
+2026-09-14T13:48:07.4191769Z Cache mode: write
+2026-09-14T13:48:07.4193167Z Prepare workflow directory
+2026-09-14T13:48:07.4699067Z Prepare all required actions
+2026-09-14T13:48:07.4773926Z Getting action download info
+2026-09-14T13:48:07.6427261Z Download action repository 'actions/checkout@v7' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+2026-09-14T13:48:07.7473871Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-09-14T13:48:07.9449394Z Complete job name: Sync chartjs
+2026-09-14T13:48:08.0286181Z ##[group]Run actions/checkout@v7
+2026-09-14T13:48:08.0287116Z with:
+2026-09-14T13:48:08.0287546Z   fetch-depth: 0
+2026-09-14T13:48:08.0287995Z   submodules: false
+2026-09-14T13:48:08.0288469Z   persist-credentials: true
+2026-09-14T13:48:08.0289058Z   repository: wortholicai-hub/engineering-library
+2026-09-14T13:48:08.0293287Z   token: ***
+2026-09-14T13:48:08.0293776Z   ssh-strict: true
+2026-09-14T13:48:08.0294286Z   ssh-user: git
+2026-09-14T13:48:08.0294748Z   clean: true
+2026-09-14T13:48:08.0295203Z   sparse-checkout-cone-mode: true
+2026-09-14T13:48:08.0295733Z   fetch-tags: false
+2026-09-14T13:48:08.0296188Z   show-progress: true
+2026-09-14T13:48:08.0296666Z   lfs: false
+2026-09-14T13:48:08.0297110Z   set-safe-directory: true
+2026-09-14T13:48:08.0297635Z   allow-unsafe-pr-checkout: false
+2026-09-14T13:48:08.0298438Z ##[endgroup]
+2026-09-14T13:48:08.1328333Z Syncing repository: wortholicai-hub/engineering-library
+2026-09-14T13:48:08.1330747Z ##[group]Getting Git version info
+2026-09-14T13:48:08.1331797Z Working directory is '/home/runner/work/engineering-library/engineering-library'
+2026-09-14T13:48:08.1333072Z [command]/usr/bin/git version
+2026-09-14T13:48:08.1442060Z git version 2.55.0
+2026-09-14T13:48:08.1471370Z ##[endgroup]
+2026-09-14T13:48:08.1483322Z Temporarily overriding HOME='/home/runner/work/_temp/9712fe54-baa7-4a24-8434-ba75ba644113' before making global git config changes
+2026-09-14T13:48:08.1491925Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-14T13:48:08.1494428Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/engineering-library/engineering-library
+2026-09-14T13:48:08.1541891Z Deleting the contents of '/home/runner/work/engineering-library/engineering-library'
+2026-09-14T13:48:08.1545597Z ##[group]Determining repository object format
+2026-09-14T13:48:08.1547123Z ##[endgroup]
+2026-09-14T13:48:08.1548698Z ##[group]Initializing the repository
+2026-09-14T13:48:08.1552812Z [command]/usr/bin/git init /home/runner/work/engineering-library/engineering-library
+2026-09-14T13:48:08.1671780Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-09-14T13:48:08.1673487Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-09-14T13:48:08.1675087Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-09-14T13:48:08.1676287Z hint: call:
+2026-09-14T13:48:08.1676987Z hint:
+2026-09-14T13:48:08.1677810Z hint: 	git config --global init.defaultBranch <name>
+2026-09-14T13:48:08.1678883Z hint:
+2026-09-14T13:48:08.1679854Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-09-14T13:48:08.1681696Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-09-14T13:48:08.1682916Z hint:
+2026-09-14T13:48:08.1683627Z hint: 	git branch -m <name>
+2026-09-14T13:48:08.1684386Z hint:
+2026-09-14T13:48:08.1685424Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-09-14T13:48:08.1687368Z Initialized empty Git repository in /home/runner/work/engineering-library/engineering-library/.git/
+2026-09-14T13:48:08.1690643Z [command]/usr/bin/git remote add origin https://github.com/wortholicai-hub/engineering-library
+2026-09-14T13:48:08.1776120Z ##[endgroup]
+2026-09-14T13:48:08.1777550Z ##[group]Disabling automatic garbage collection
+2026-09-14T13:48:08.1779903Z [command]/usr/bin/git config --local gc.auto 0
+2026-09-14T13:48:08.1819496Z ##[endgroup]
+2026-09-14T13:48:08.1821554Z ##[group]Setting up auth
+2026-09-14T13:48:08.1822468Z Removing SSH command configuration
+2026-09-14T13:48:08.1827530Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-14T13:48:08.1862482Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-14T13:48:08.2227088Z Removing HTTP extra header
+2026-09-14T13:48:08.2232926Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-14T13:48:08.2274388Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-14T13:48:08.2494779Z Removing includeIf entries pointing to credentials config files
+2026-09-14T13:48:08.2499523Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-09-14T13:48:08.2533718Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-09-14T13:48:08.2767645Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-e2e3d75f-3d0b-405e-8c25-aeb54515d7e8.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-09-14T13:48:08.2807943Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/engineering-library/engineering-library/.git.path /home/runner/work/_temp/git-credentials-e2e3d75f-3d0b-405e-8c25-aeb54515d7e8.config
+2026-09-14T13:48:08.2841596Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/engineering-library/engineering-library/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-e2e3d75f-3d0b-405e-8c25-aeb54515d7e8.config
+2026-09-14T13:48:08.2878169Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-e2e3d75f-3d0b-405e-8c25-aeb54515d7e8.config
+2026-09-14T13:48:08.2914380Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-e2e3d75f-3d0b-405e-8c25-aeb54515d7e8.config
+2026-09-14T13:48:08.2945960Z ##[endgroup]
+2026-09-14T13:48:08.2947412Z ##[group]Fetching the repository
+2026-09-14T13:48:08.2954010Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+2026-09-14T13:48:08.7906304Z From https://github.com/wortholicai-hub/engineering-library
+2026-09-14T13:48:08.7909261Z  * [new branch]      dependabot/github_actions/actions/setup-node-7 -> origin/dependabot/github_actions/actions/setup-node-7
+2026-09-14T13:48:08.7911837Z  * [new branch]      main       -> origin/main
+2026-09-14T13:48:08.7916000Z [command]/usr/bin/git branch --list --remote origin/main
+2026-09-14T13:48:08.7947713Z   origin/main
+2026-09-14T13:48:08.7956039Z [command]/usr/bin/git rev-parse refs/remotes/origin/main
+2026-09-14T13:48:08.7982362Z 8f64f83138332d4a4f06907567db17e0244a7400
+2026-09-14T13:48:08.7994658Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules origin +67aaed82450689cf1c2053f7411b8431b9f45673:refs/remotes/origin/main
+2026-09-14T13:48:08.8055532Z From https://github.com/wortholicai-hub/engineering-library
+2026-09-14T13:48:08.8058768Z  + 8f64f83...67aaed8 67aaed82450689cf1c2053f7411b8431b9f45673 -> origin/main  (forced update)
+2026-09-14T13:48:08.8066000Z [command]/usr/bin/git branch --list --remote origin/main
+2026-09-14T13:48:08.8095968Z   origin/main
+2026-09-14T13:48:08.8104458Z [command]/usr/bin/git rev-parse refs/remotes/origin/main
+2026-09-14T13:48:08.8131564Z 67aaed82450689cf1c2053f7411b8431b9f45673
+2026-09-14T13:48:08.8137989Z ##[endgroup]
+2026-09-14T13:48:08.8140259Z ##[group]Determining the checkout info
+2026-09-14T13:48:08.8142618Z ##[endgroup]
+2026-09-14T13:48:08.8143924Z [command]/usr/bin/git sparse-checkout disable
+2026-09-14T13:48:08.8198430Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-09-14T13:48:08.8231405Z ##[group]Checking out the ref
+2026-09-14T13:48:08.8233955Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-09-14T13:48:08.8323301Z Switched to a new branch 'main'
+2026-09-14T13:48:08.8331726Z branch 'main' set up to track 'origin/main'.
+2026-09-14T13:48:08.8338831Z ##[endgroup]
+2026-09-14T13:48:08.8381500Z [command]/usr/bin/git log -1 --format=%H
+2026-09-14T13:48:08.8410249Z 67aaed82450689cf1c2053f7411b8431b9f45673
+2026-09-14T13:48:08.8837846Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-09-14T13:48:08.8843837Z ##[group]Run actions/setup-node@v4
+2026-09-14T13:48:08.8844886Z with:
+2026-09-14T13:48:08.8845669Z   node-version: 20
+2026-09-14T13:48:08.8846531Z   cache: npm
+2026-09-14T13:48:08.8847321Z   always-auth: false
+2026-09-14T13:48:08.8848207Z   check-latest: false
+2026-09-14T13:48:08.8858795Z   token: ***
+2026-09-14T13:48:08.8859592Z ##[endgroup]
+2026-09-14T13:48:09.0298254Z Attempting to download 20...
+2026-09-14T13:48:09.0406726Z (node:2165) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-09-14T13:48:09.0409661Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-09-14T13:48:09.5053050Z Acquiring 20.20.2 - x64 from https://github.com/actions/node-versions/releases/download/20.20.2-23521894959/node-20.20.2-linux-x64.tar.gz
+2026-09-14T13:48:09.8213530Z Extracting ...
+2026-09-14T13:48:09.8363834Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/cf24c837-c4b0-49c1-813f-f1236a554c61 -f /home/runner/work/_temp/ca95a0a8-ddf1-4eec-a4c2-7f8c4f6238a7
+2026-09-14T13:48:10.8990474Z Adding to the cache ...
+2026-09-14T13:48:12.7213089Z ##[group]Environment details
+2026-09-14T13:48:12.9455611Z node: v20.20.2
+2026-09-14T13:48:12.9456437Z npm: 10.8.2
+2026-09-14T13:48:12.9456787Z yarn: 1.22.22
+2026-09-14T13:48:12.9457617Z ##[endgroup]
+2026-09-14T13:48:12.9485768Z [command]/opt/hostedtoolcache/node/20.20.2/x64/bin/npm config get cache
+2026-09-14T13:48:13.0537908Z /home/runner/.npm
+2026-09-14T13:48:13.1378938Z Cache hit for: node-cache-Linux-x64-npm-7b5ff6e2c7365fa8ab88eca9bcc4fd74ad2a68c517eb68b469c54e5efc745ee7
+2026-09-14T13:48:13.1486692Z (node:2165) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-09-14T13:48:13.1902779Z Received 114802 of 114802 (100.0%), 6.8 MBs/sec
+2026-09-14T13:48:13.1903537Z Cache Size: ~0 MB (114802 B)
+2026-09-14T13:48:13.1928211Z [command]/usr/bin/tar -xf /home/runner/work/_temp/6f5bd7ba-2ff3-4c86-a82c-4e6743c15157/cache.tzst -P -C /home/runner/work/engineering-library/engineering-library --use-compress-program unzstd
+2026-09-14T13:48:13.2019312Z Cache restored successfully
+2026-09-14T13:48:13.2023949Z Cache restored from key: node-cache-Linux-x64-npm-7b5ff6e2c7365fa8ab88eca9bcc4fd74ad2a68c517eb68b469c54e5efc745ee7
+2026-09-14T13:48:13.2211225Z ##[group]Run npm ci
+2026-09-14T13:48:13.2211549Z [36;1mnpm ci[0m
+2026-09-14T13:48:13.2253971Z shell: /usr/bin/bash -e {0}
+2026-09-14T13:48:13.2254289Z ##[endgroup]
+2026-09-14T13:48:13.7384668Z 
+2026-09-14T13:48:13.7392637Z added 1 package, and audited 2 packages in 446ms
+2026-09-14T13:48:13.7392997Z 
+2026-09-14T13:48:13.7393217Z 1 package is looking for funding
+2026-09-14T13:48:13.7393677Z   run `npm fund` for details
+2026-09-14T13:48:13.7394004Z 
+2026-09-14T13:48:13.7394398Z found 0 vulnerabilities
+2026-09-14T13:48:13.7502625Z ##[group]Run node --input-type=module -e "
+2026-09-14T13:48:13.7503043Z [36;1mnode --input-type=module -e "[0m
+2026-09-14T13:48:13.7503429Z [36;1m  import { findSource } from './scripts/registry.mjs';[0m
+2026-09-14T13:48:13.7503873Z [36;1m  import { appendFileSync } from 'node:fs';[0m
+2026-09-14T13:48:13.7504222Z [36;1m  const s = findSource('chartjs');[0m
+2026-09-14T13:48:13.7504573Z [36;1m  appendFileSync(process.env.GITHUB_OUTPUT,[0m
+2026-09-14T13:48:13.7504911Z [36;1m    'path=' + s.path + '\n' +[0m
+2026-09-14T13:48:13.7505281Z [36;1m    'internal_dir=' + s.internal_dir + '\n' +[0m
+2026-09-14T13:48:13.7505627Z [36;1m    'title=' + s.title + '\n');[0m
+2026-09-14T13:48:13.7505899Z [36;1m"[0m
+2026-09-14T13:48:13.7543435Z shell: /usr/bin/bash -e {0}
+2026-09-14T13:48:13.7543727Z ##[endgroup]
+2026-09-14T13:48:13.8515987Z ##[group]Run git submodule update --init -- "frontend/chartjs/upstream/Chart.js"
+2026-09-14T13:48:13.8516619Z [36;1mgit submodule update --init -- "frontend/chartjs/upstream/Chart.js"[0m
+2026-09-14T13:48:13.8555814Z shell: /usr/bin/bash -e {0}
+2026-09-14T13:48:13.8556101Z ##[endgroup]
+2026-09-14T13:48:13.9182788Z Submodule 'frontend/chartjs/upstream/Chart.js' (https://github.com/chartjs/Chart.js.git) registered for path 'frontend/chartjs/upstream/Chart.js'
+2026-09-14T13:48:13.9215349Z Cloning into '/home/runner/work/engineering-library/engineering-library/frontend/chartjs/upstream/Chart.js'...
+2026-09-14T13:48:16.3772291Z Submodule path 'frontend/chartjs/upstream/Chart.js': checked out 'cb02e1d207bd4c4c40b20c259017f85f26f1e30a'
+2026-09-14T13:48:16.3813105Z ##[group]Run # Hash our own code BEFORE the sync so we can prove afterwards that
+2026-09-14T13:48:16.3813737Z [36;1m# Hash our own code BEFORE the sync so we can prove afterwards that[0m
+2026-09-14T13:48:16.3814178Z [36;1m# the sync did not touch a single byte of it.[0m
+2026-09-14T13:48:16.3814679Z [36;1mHASH=$(git ls-files -s -- "frontend/chartjs/examples" | sha256sum | cut -d' ' -f1)[0m
+2026-09-14T13:48:16.3815175Z [36;1mecho "hash=$HASH" >> "$GITHUB_OUTPUT"[0m
+2026-09-14T13:48:16.3815520Z [36;1mecho "Internal tree hash before sync: $HASH"[0m
+2026-09-14T13:48:16.3855589Z shell: /usr/bin/bash -e {0}
+2026-09-14T13:48:16.3855870Z ##[endgroup]
+2026-09-14T13:48:16.4045702Z Internal tree hash before sync: bb5f11cfb5b1c5b618fb31bf682b80e2d19c22a2959ef4c77bac280e0fa4bfe0
+2026-09-14T13:48:16.4084772Z ##[group]Run node scripts/sync-upstream.mjs --source "chartjs"
+2026-09-14T13:48:16.4085273Z [36;1mnode scripts/sync-upstream.mjs --source "chartjs"[0m
+2026-09-14T13:48:16.4120804Z shell: /usr/bin/bash -e {0}
+2026-09-14T13:48:16.4121248Z env:
+2026-09-14T13:48:16.4123800Z   GITHUB_TOKEN: ***
+2026-09-14T13:48:16.4124037Z ##[endgroup]
+2026-09-14T13:48:18.3789764Z From https://github.com/chartjs/Chart.js
+2026-09-14T13:48:18.3790958Z  * branch              master     -> FETCH_HEAD
+2026-09-14T13:48:18.4602453Z Previous HEAD position was cb02e1d2 Fix early exit from clearStacks (#12155)
+2026-09-14T13:48:18.4603167Z HEAD is now at 913fee4f Add a note that axis labels can span lines (#12258)
+2026-09-14T13:48:18.4711076Z • chartjs: cb02e1d → 913fee4 (+4 commits)
+2026-09-14T13:48:18.4828160Z ##[group]Run FILE=".sync-output/chartjs.json"
+2026-09-14T13:48:18.4828578Z [36;1mFILE=".sync-output/chartjs.json"[0m
+2026-09-14T13:48:18.4828876Z [36;1mif [ ! -f "$FILE" ]; then[0m
+2026-09-14T13:48:18.4829183Z [36;1m  echo "changed=false" >> "$GITHUB_OUTPUT"[0m
+2026-09-14T13:48:18.4829530Z [36;1m  echo "No changes produced for chartjs."[0m
+2026-09-14T13:48:18.4829836Z [36;1m  exit 0[0m
+2026-09-14T13:48:18.4830371Z [36;1mfi[0m
+2026-09-14T13:48:18.4830625Z [36;1mecho "changed=true" >> "$GITHUB_OUTPUT"[0m
+2026-09-14T13:48:18.4830914Z [36;1m{[0m
+2026-09-14T13:48:18.4831147Z [36;1m  echo "branch=$(jq -r .branch "$FILE")"[0m
+2026-09-14T13:48:18.4831503Z [36;1m  echo "subject=$(jq -r .commitSubject "$FILE")"[0m
+2026-09-14T13:48:18.4831848Z [36;1m  echo "from=$(jq -r .from "$FILE")"[0m
+2026-09-14T13:48:18.4832146Z [36;1m  echo "to=$(jq -r .to "$FILE")"[0m
+2026-09-14T13:48:18.4832451Z [36;1m  echo "ahead=$(jq -r .aheadBy "$FILE")"[0m
+2026-09-14T13:48:18.4832841Z [36;1m  echo "deps=$(jq -r .dependenciesChanged "$FILE")"[0m
+2026-09-14T13:48:18.4833235Z [36;1m  echo "strategy=$(jq -r .updateStrategy "$FILE")"[0m
+2026-09-14T13:48:18.4833562Z [36;1m} >> "$GITHUB_OUTPUT"[0m
+2026-09-14T13:48:18.4869868Z shell: /usr/bin/bash -e {0}
+2026-09-14T13:48:18.4870397Z ##[endgroup]
+2026-09-14T13:48:18.5156007Z ##[group]Run node scripts/guard-internal.mjs
+2026-09-14T13:48:18.5156384Z [36;1mnode scripts/guard-internal.mjs[0m
+2026-09-14T13:48:18.5192369Z shell: /usr/bin/bash -e {0}
+2026-09-14T13:48:18.5192638Z ##[endgroup]
+2026-09-14T13:48:18.6055073Z Guard: inspecting 1 changed path(s).
+2026-09-14T13:48:18.6058881Z     ~ frontend/chartjs/upstream/Chart.js
+2026-09-14T13:48:18.6059347Z 
+2026-09-14T13:48:18.6060389Z ✓ Guard passed: only registered upstream submodule pointers changed.
+2026-09-14T13:48:18.6128664Z ##[group]Run HASH=$(git ls-files -s -- "frontend/chartjs/examples" | sha256sum | cut -d' ' -f1)
+2026-09-14T13:48:18.6129348Z [36;1mHASH=$(git ls-files -s -- "frontend/chartjs/examples" | sha256sum | cut -d' ' -f1)[0m
+2026-09-14T13:48:18.6129833Z [36;1mecho "Internal tree hash after sync:  $HASH"[0m
+2026-09-14T13:48:18.6130766Z [36;1mif [ "$HASH" != "bb5f11cfb5b1c5b618fb31bf682b80e2d19c22a2959ef4c77bac280e0fa4bfe0" ]; then[0m
+2026-09-14T13:48:18.6131347Z [36;1m  echo "::error::Upstream sync modified internal code. Aborting."[0m
+2026-09-14T13:48:18.6131718Z [36;1m  exit 1[0m
+2026-09-14T13:48:18.6131920Z [36;1mfi[0m
+2026-09-14T13:48:18.6132220Z [36;1mecho "Internal code is byte-for-byte identical. ✓"[0m
+2026-09-14T13:48:18.6168787Z shell: /usr/bin/bash -e {0}
+2026-09-14T13:48:18.6169060Z ##[endgroup]
+2026-09-14T13:48:18.6254791Z Internal tree hash after sync:  bb5f11cfb5b1c5b618fb31bf682b80e2d19c22a2959ef4c77bac280e0fa4bfe0
+2026-09-14T13:48:18.6255636Z Internal code is byte-for-byte identical. ✓
+2026-09-14T13:48:18.6285173Z ##[group]Run npm run validate:registry
+2026-09-14T13:48:18.6285541Z [36;1mnpm run validate:registry[0m
+2026-09-14T13:48:18.6285817Z [36;1mnpm run docs:render[0m
+2026-09-14T13:48:18.6286195Z [36;1m# Regenerating docs updates the pinned commit table; stage it so the[0m
+2026-09-14T13:48:18.6286631Z [36;1m# PR stays self-consistent.[0m
+2026-09-14T13:48:18.6286934Z [36;1mgit add docs/upstream-sources.md[0m
+2026-09-14T13:48:18.6322441Z shell: /usr/bin/bash -e {0}
+2026-09-14T13:48:18.6322716Z ##[endgroup]
+2026-09-14T13:48:18.7413692Z 
+2026-09-14T13:48:18.7414471Z > @engineering-library/root@0.1.0 validate:registry
+2026-09-14T13:48:18.7415357Z > node scripts/registry.mjs --validate
+2026-09-14T13:48:18.7415602Z 
+2026-09-14T13:48:18.8355340Z Registry OK — 4 source(s): 3 enabled, 1 disabled.
+2026-09-14T13:48:18.9906363Z 
+2026-09-14T13:48:18.9907062Z > @engineering-library/root@0.1.0 docs:render
+2026-09-14T13:48:18.9907799Z > node scripts/render-docs.mjs
+2026-09-14T13:48:18.9908216Z 
+2026-09-14T13:48:19.0885185Z ✓ wrote docs/upstream-sources.md
+2026-09-14T13:48:19.1035158Z ##[group]Run node scripts/license-audit.mjs --remote
+2026-09-14T13:48:19.1035968Z [36;1mnode scripts/license-audit.mjs --remote[0m
+2026-09-14T13:48:19.1075943Z shell: /usr/bin/bash -e {0}
+2026-09-14T13:48:19.1076217Z env:
+2026-09-14T13:48:19.1078912Z   GITHUB_TOKEN: ***
+2026-09-14T13:48:19.1079160Z ##[endgroup]
+2026-09-14T13:48:20.3303480Z Licence audit
+2026-09-14T13:48:20.3303780Z 
+2026-09-14T13:48:20.3304222Z   ✓ shadcn/ui
+2026-09-14T13:48:20.3304875Z       declared : MIT  (license_ok=true, enabled=true)
+2026-09-14T13:48:20.3305634Z       local    : (submodule not checked out)
+2026-09-14T13:48:20.3306263Z       upstream : MIT
+2026-09-14T13:48:20.3306704Z       verdict  : ok
+2026-09-14T13:48:20.3306964Z 
+2026-09-14T13:48:20.3307246Z   ✓ Chart.js
+2026-09-14T13:48:20.3307827Z       declared : MIT  (license_ok=true, enabled=true)
+2026-09-14T13:48:20.3308456Z       local    : LICENSE.md
+2026-09-14T13:48:20.3308952Z       upstream : MIT
+2026-09-14T13:48:20.3309416Z       verdict  : ok
+2026-09-14T13:48:20.3309664Z 
+2026-09-14T13:48:20.3310317Z   ✓ react-chartjs-2
+2026-09-14T13:48:20.3310925Z       declared : MIT  (license_ok=true, enabled=true)
+2026-09-14T13:48:20.3311646Z       local    : (submodule not checked out)
+2026-09-14T13:48:20.3312215Z       upstream : MIT
+2026-09-14T13:48:20.3312657Z       verdict  : ok
+2026-09-14T13:48:20.3312907Z 
+2026-09-14T13:48:20.3313260Z   · shadcn-ui/next-template
+2026-09-14T13:48:20.3313956Z       declared : NOASSERTION  (license_ok=false, enabled=false)
+2026-09-14T13:48:20.3314691Z       verdict  : not-ingested
+2026-09-14T13:48:20.3315034Z 
+2026-09-14T13:48:20.3315359Z Licence audit passed for 4 source(s).
+2026-09-14T13:48:20.3395917Z ##[group]Run npm ci
+2026-09-14T13:48:20.3396188Z [36;1mnpm ci[0m
+2026-09-14T13:48:20.3396405Z [36;1mnpm run typecheck[0m
+2026-09-14T13:48:20.3396646Z [36;1mnpm test[0m
+2026-09-14T13:48:20.3433837Z shell: /usr/bin/bash -e {0}
+2026-09-14T13:48:20.3434115Z ##[endgroup]
+2026-09-14T13:48:20.6984203Z npm warn EBADENGINE Unsupported engine {
+2026-09-14T13:48:20.6985159Z npm warn EBADENGINE   package: 'vitest@5.0.0',
+2026-09-14T13:48:20.6986240Z npm warn EBADENGINE   required: { node: '^22.12.0 || ^24.0.0 || >=26.0.0' },
+2026-09-14T13:48:20.6987359Z npm warn EBADENGINE   current: { node: 'v20.20.2', npm: '10.8.2' }
+2026-09-14T13:48:20.6987937Z npm warn EBADENGINE }
+2026-09-14T13:48:22.1791283Z 
+2026-09-14T13:48:22.1792154Z added 48 packages, and audited 49 packages in 2s
+2026-09-14T13:48:22.1792688Z 
+2026-09-14T13:48:22.1793202Z 12 packages are looking for funding
+2026-09-14T13:48:22.1793615Z   run `npm fund` for details
+2026-09-14T13:48:22.1803978Z 
+2026-09-14T13:48:22.1804263Z found 0 vulnerabilities
+2026-09-14T13:48:22.2992764Z 
+2026-09-14T13:48:22.2993689Z > @engineering-library/chartjs-examples@0.1.0 typecheck
+2026-09-14T13:48:22.2994416Z > tsc --noEmit
+2026-09-14T13:48:22.2994643Z 
+2026-09-14T13:48:22.6501291Z 
+2026-09-14T13:48:22.6502082Z > @engineering-library/chartjs-examples@0.1.0 test
+2026-09-14T13:48:22.6502516Z > vitest run
+2026-09-14T13:48:22.6502660Z 
+2026-09-14T13:48:22.9380583Z 
+2026-09-14T13:48:22.9382745Z [1m[30m[46m RUN [49m[39m[22m [36mv5.0.0 [39m[90m/home/runner/work/engineering-library/engineering-library/frontend/chartjs/examples[39m
+2026-09-14T13:48:22.9410377Z 
+2026-09-14T13:48:23.1732126Z  [32m✓[39m src/dashboard-presets.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-09-14T13:48:23.2342571Z  [32m✓[39m src/react-integration.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-09-14T13:48:23.2385741Z 
+2026-09-14T13:48:23.2391604Z [2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+2026-09-14T13:48:23.2392355Z [2m      Tests [22m [1m[32m23 passed[39m[22m[90m (23)[39m
+2026-09-14T13:48:23.2392821Z [2m   Start at [22m 13:48:22
+2026-09-14T13:48:23.2393390Z [2m   Duration [22m 287ms[2m (transform 44%, import 40%, tests 11%, worker 4%)[22m
+2026-09-14T13:48:23.2402885Z 
+2026-09-14T13:48:23.2758160Z ##[group]Run {
+2026-09-14T13:48:23.2758443Z [36;1m{[0m
+2026-09-14T13:48:23.2758658Z [36;1m  echo '| Check | Result |'[0m
+2026-09-14T13:48:23.2758944Z [36;1m  echo '| --- | --- |'[0m
+2026-09-14T13:48:23.2759333Z [36;1m  echo '| Registry schema + `.gitmodules` consistency | ✅ passed |'[0m
+2026-09-14T13:48:23.2759846Z [36;1m  echo '| Guard: only registered submodule pointers changed | ✅ passed |'[0m
+2026-09-14T13:48:23.2760843Z [36;1m  echo '| Internal code byte-for-byte unchanged | ✅ passed |'[0m
+2026-09-14T13:48:23.2761330Z [36;1m  echo '| Upstream licence re-verified at new commit | ✅ passed |'[0m
+2026-09-14T13:48:23.2761835Z [36;1m  echo '| Internal package typecheck (`tsc --noEmit`) | ✅ passed |'[0m
+2026-09-14T13:48:23.2762258Z [36;1m  echo '| Internal package tests | ✅ passed |'[0m
+2026-09-14T13:48:23.2762628Z [36;1m  echo '| Generated docs regenerated | ✅ passed |'[0m
+2026-09-14T13:48:23.2762976Z [36;1m} > .sync-output/validation.md[0m
+2026-09-14T13:48:23.2763341Z [36;1m# Splice the real results into the PR body.[0m
+2026-09-14T13:48:23.2763661Z [36;1mnode --input-type=module -e "[0m
+2026-09-14T13:48:23.2764019Z [36;1m  import { readFileSync, writeFileSync } from 'node:fs';[0m
+2026-09-14T13:48:23.2764492Z [36;1m  const body = readFileSync('.sync-output/chartjs.pr-body.md','utf8');[0m
+2026-09-14T13:48:23.2764995Z [36;1m  const val  = readFileSync('.sync-output/validation.md','utf8');[0m
+2026-09-14T13:48:23.2765432Z [36;1m  writeFileSync('.sync-output/chartjs.pr-body.md',[0m
+2026-09-14T13:48:23.2765861Z [36;1m    body.replace('_Validation results are appended by CI._', val));[0m
+2026-09-14T13:48:23.2766242Z [36;1m"[0m
+2026-09-14T13:48:23.2802511Z shell: /usr/bin/bash -e {0}
+2026-09-14T13:48:23.2802782Z ##[endgroup]
+2026-09-14T13:48:23.3161157Z ##[group]Run git config user.name  'github-actions[bot]'
+2026-09-14T13:48:23.3161621Z [36;1mgit config user.name  'github-actions[bot]'[0m
+2026-09-14T13:48:23.3162078Z [36;1mgit config user.email 'github-actions[bot]@users.noreply.github.com'[0m
+2026-09-14T13:48:23.3162636Z [36;1mgit add -- "frontend/chartjs/upstream/Chart.js" docs/upstream-sources.md[0m
+2026-09-14T13:48:23.3163175Z [36;1mgit commit -m "chore(upstream): bump Chart.js to 913fee4 (+4)" \[0m
+2026-09-14T13:48:23.3163617Z [36;1m           -m "Upstream: Chart.js (4 new commit(s))" \[0m
+2026-09-14T13:48:23.3164019Z [36;1m           -m "From: cb02e1d207bd4c4c40b20c259017f85f26f1e30a" \[0m
+2026-09-14T13:48:23.3164444Z [36;1m           -m "To:   913fee4f40707da6316c6c55c18151ab0436a863" \[0m
+2026-09-14T13:48:23.3164834Z [36;1m           -m "Upstream deps changed: true" \[0m
+2026-09-14T13:48:23.3165287Z [36;1m           -m "Validated and committed by .github/workflows/upstream-sync.yml"[0m
+2026-09-14T13:48:23.3201326Z shell: /usr/bin/bash -e {0}
+2026-09-14T13:48:23.3201605Z ##[endgroup]
+2026-09-14T13:48:23.3440179Z [main 871da08] chore(upstream): bump Chart.js to 913fee4 (+4)
+2026-09-14T13:48:23.3440901Z  2 files changed, 2 insertions(+), 2 deletions(-)
+2026-09-14T13:48:23.3474893Z ##[group]Run BASE="main"
+2026-09-14T13:48:23.3475188Z [36;1mBASE="main"[0m
+2026-09-14T13:48:23.3475528Z [36;1m# Another source in this matrix may have landed a commit since we[0m
+2026-09-14T13:48:23.3476008Z [36;1m# checked out. Rebase and retry rather than failing the run.[0m
+2026-09-14T13:48:23.3476389Z [36;1mfor attempt in 1 2 3 4 5; do[0m
+2026-09-14T13:48:23.3476688Z [36;1m  if git push origin "HEAD:$BASE"; then[0m
+2026-09-14T13:48:23.3477042Z [36;1m    echo "Pushed to $BASE on attempt $attempt"[0m
+2026-09-14T13:48:23.3477353Z [36;1m    exit 0[0m
+2026-09-14T13:48:23.3477568Z [36;1m  fi[0m
+2026-09-14T13:48:23.3478052Z [36;1m  echo "Push rejected (attempt $attempt) — rebasing onto origin/$BASE"[0m
+2026-09-14T13:48:23.3478465Z [36;1m  git fetch origin "$BASE"[0m
+2026-09-14T13:48:23.3478830Z [36;1m  git rebase "origin/$BASE" || { git rebase --abort; exit 1; }[0m
+2026-09-14T13:48:23.3479205Z [36;1m  sleep 3[0m
+2026-09-14T13:48:23.3479418Z [36;1mdone[0m
+2026-09-14T13:48:23.3479739Z [36;1mecho "::error::Could not push to $BASE after 5 attempts."[0m
+2026-09-14T13:48:23.3480441Z [36;1mexit 1[0m
+2026-09-14T13:48:23.3514395Z shell: /usr/bin/bash -e {0}
+2026-09-14T13:48:23.3514670Z ##[endgroup]
+2026-09-14T13:48:23.5906671Z To https://github.com/wortholicai-hub/engineering-library
+2026-09-14T13:48:23.5907472Z  ! [rejected]        HEAD -> main (non-fast-forward)
+2026-09-14T13:48:23.5908545Z error: failed to push some refs to 'https://github.com/wortholicai-hub/engineering-library'
+2026-09-14T13:48:23.5934220Z hint: Updates were rejected because the tip of your current branch is behind
+2026-09-14T13:48:23.5935365Z hint: its remote counterpart. If you want to integrate the remote changes,
+2026-09-14T13:48:23.5936184Z hint: use 'git pull' before pushing again.
+2026-09-14T13:48:23.5936877Z hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+2026-09-14T13:48:23.5938566Z Push rejected (attempt 1) — rebasing onto origin/main
+2026-09-14T13:48:23.9010731Z From https://github.com/wortholicai-hub/engineering-library
+2026-09-14T13:48:23.9011466Z  * branch            main       -> FETCH_HEAD
+2026-09-14T13:48:23.9012044Z    67aaed8..8f64f83  main       -> origin/main
+2026-09-14T13:48:23.9180415Z Auto-merging docs/upstream-sources.md
+2026-09-14T13:48:23.9181707Z CONFLICT (content): Merge conflict in docs/upstream-sources.md
+2026-09-14T13:48:23.9182989Z Rebasing (1/1)
+2026-09-14T13:48:23.9183838Z error: could not apply 871da08... chore(upstream): bump Chart.js to 913fee4 (+4)
+2026-09-14T13:48:23.9184935Z hint: Resolve all conflicts manually, mark them as resolved with
+2026-09-14T13:48:23.9185674Z hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+2026-09-14T13:48:23.9186234Z hint: You can instead skip this commit: run "git rebase --skip".
+2026-09-14T13:48:23.9186841Z hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+2026-09-14T13:48:23.9187502Z hint: Disable this message with "git config set advice.mergeConflict false"
+2026-09-14T13:48:23.9188261Z Could not apply 871da08... # chore(upstream): bump Chart.js to 913fee4 (+4)
+2026-09-14T13:48:23.9240626Z ##[error]Process completed with exit code 1.
+2026-09-14T13:48:23.9390852Z Post job cleanup.
+2026-09-14T13:48:24.0211309Z [command]/usr/bin/git version
+2026-09-14T13:48:24.0255267Z git version 2.55.0
+2026-09-14T13:48:24.0301821Z Temporarily overriding HOME='/home/runner/work/_temp/ff7751c6-7ea1-4fcf-9e2e-71e68463aaa5' before making global git config changes
+2026-09-14T13:48:24.0303325Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-14T13:48:24.0308841Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/engineering-library/engineering-library
+2026-09-14T13:48:24.0343246Z Removing SSH command configuration
+2026-09-14T13:48:24.0351160Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-14T13:48:24.0390589Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-14T13:48:24.0640363Z Entering 'frontend/chartjs/upstream/Chart.js'
+2026-09-14T13:48:24.0880890Z Removing HTTP extra header
+2026-09-14T13:48:24.0882063Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-14T13:48:24.0954545Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-14T13:48:24.1190943Z Entering 'frontend/chartjs/upstream/Chart.js'
+2026-09-14T13:48:24.1249021Z Removing includeIf entries pointing to credentials config files
+2026-09-14T13:48:24.1257681Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-09-14T13:48:24.1292463Z includeif.gitdir:/home/runner/work/engineering-library/engineering-library/.git.path
+2026-09-14T13:48:24.1293437Z includeif.gitdir:/home/runner/work/engineering-library/engineering-library/.git/worktrees/*.path
+2026-09-14T13:48:24.1294078Z includeif.gitdir:/github/workspace/.git.path
+2026-09-14T13:48:24.1294556Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-09-14T13:48:24.1301297Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/engineering-library/engineering-library/.git.path
+2026-09-14T13:48:24.1327738Z /home/runner/work/_temp/git-credentials-e2e3d75f-3d0b-405e-8c25-aeb54515d7e8.config
+2026-09-14T13:48:24.1340209Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/engineering-library/engineering-library/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-e2e3d75f\-3d0b\-405e\-8c25\-aeb54515d7e8\.config
+2026-09-14T13:48:24.1378286Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/engineering-library/engineering-library/.git/worktrees/*.path
+2026-09-14T13:48:24.1404965Z /home/runner/work/_temp/git-credentials-e2e3d75f-3d0b-405e-8c25-aeb54515d7e8.config
+2026-09-14T13:48:24.1413655Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/engineering-library/engineering-library/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-e2e3d75f\-3d0b\-405e\-8c25\-aeb54515d7e8\.config
+2026-09-14T13:48:24.1457512Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-09-14T13:48:24.1482993Z /github/runner_temp/git-credentials-e2e3d75f-3d0b-405e-8c25-aeb54515d7e8.config
+2026-09-14T13:48:24.1490179Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-e2e3d75f\-3d0b\-405e\-8c25\-aeb54515d7e8\.config
+2026-09-14T13:48:24.1525430Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-09-14T13:48:24.1551895Z /github/runner_temp/git-credentials-e2e3d75f-3d0b-405e-8c25-aeb54515d7e8.config
+2026-09-14T13:48:24.1560859Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-e2e3d75f\-3d0b\-405e\-8c25\-aeb54515d7e8\.config
+2026-09-14T13:48:24.1596987Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-09-14T13:48:24.1811561Z Entering 'frontend/chartjs/upstream/Chart.js'
+2026-09-14T13:48:24.1833138Z file:/home/runner/work/engineering-library/engineering-library/.git/modules/frontend/chartjs/upstream/Chart.js/config	remote.origin.url
+2026-09-14T13:48:24.1866687Z [command]/usr/bin/git config --file /home/runner/work/engineering-library/engineering-library/.git/modules/frontend/chartjs/upstream/Chart.js/config --name-only --get-regexp ^includeIf\.gitdir:
+2026-09-14T13:48:24.1896848Z Removing credentials config '/home/runner/work/_temp/git-credentials-e2e3d75f-3d0b-405e-8c25-aeb54515d7e8.config'
+2026-09-14T13:48:24.2035554Z Cleaning up orphan processes
+2026-09-14T13:48:24.2504415Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/setup-node@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

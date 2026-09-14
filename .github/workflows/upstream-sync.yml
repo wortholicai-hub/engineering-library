@@ -103,6 +103,19 @@ jobs:
           submodules: false
           persist-credentials: true
 
+      # actions/checkout pins to the SHA that triggered the run, so every job
+      # in this matrix would otherwise start from the same base — and each one
+      # regenerates the shared docs/upstream-sources.md, guaranteeing a
+      # conflict for the second and third source. Starting from the live tip
+      # (together with max-parallel: 1) means each source builds on the
+      # previous one's commit.
+      - name: Start from the current tip of the default branch
+        run: |
+          BASE="${{ github.event.repository.default_branch }}"
+          git fetch origin "$BASE"
+          git checkout -B "$BASE" "origin/$BASE"
+          echo "Starting from $(git rev-parse --short HEAD) on $BASE"
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -247,8 +260,8 @@ jobs:
         if: steps.meta.outputs.changed == 'true' && steps.meta.outputs.strategy == 'auto'
         run: |
           BASE="${{ github.event.repository.default_branch }}"
-          # Another source in this matrix may have landed a commit since we
-          # checked out. Rebase and retry rather than failing the run.
+          # Safety net for a genuine race (e.g. a Dependabot merge landing
+          # mid-run). Rebase and retry rather than failing the run.
           for attempt in 1 2 3 4 5; do
             if git push origin "HEAD:$BASE"; then
               echo "Pushed to $BASE on attempt $attempt"
@@ -256,7 +269,22 @@ jobs:
             fi
             echo "Push rejected (attempt $attempt) — rebasing onto origin/$BASE"
             git fetch origin "$BASE"
-            git rebase "origin/$BASE" || { git rebase --abort; exit 1; }
+            if ! git rebase "origin/$BASE"; then
+              # docs/upstream-sources.md is GENERATED, so a conflict in it has
+              # a single correct resolution: regenerate it from the registry.
+              UNMERGED=$(git diff --name-only --diff-filter=U)
+              if [ "$UNMERGED" = "docs/upstream-sources.md" ]; then
+                echo "Regenerating the conflicted generated doc and continuing."
+                npm run docs:render
+                git add docs/upstream-sources.md
+                GIT_EDITOR=true git rebase --continue || { git rebase --abort; exit 1; }
+              else
+                echo "::error::Rebase conflict outside generated files:"
+                echo "$UNMERGED"
+                git rebase --abort
+                exit 1
+              fi
+            fi
             sleep 3
           done
           echo "::error::Could not push to $BASE after 5 attempts."
