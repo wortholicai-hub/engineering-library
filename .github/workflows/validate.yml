@@ -26,7 +26,7 @@ jobs:
     name: Registry, docs and licences
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           # Submodules ARE checked out here so the licence audit can confirm
@@ -68,7 +68,7 @@ jobs:
     if: startsWith(github.head_ref, 'sync/')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           submodules: false
@@ -97,7 +97,7 @@ jobs:
           - frontend/chartjs/examples
           - frontend/shadcn/templates
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: false
 
