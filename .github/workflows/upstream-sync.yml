@@ -27,6 +27,10 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  # Needed to dispatch Validate after an auto-commit: a push made with
+  # GITHUB_TOKEN does not trigger workflows (GitHub's anti-recursion rule),
+  # so without this the default branch would never be re-verified after a sync.
+  actions: write
 
 concurrency:
   group: upstream-sync
@@ -302,6 +306,18 @@ jobs:
             echo "Committed directly to \`${{ github.event.repository.default_branch }}\` because"
             echo "this source is configured \`update_strategy: auto\` in sources.yml."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Re-verify the default branch after the auto-commit
+        if: steps.meta.outputs.changed == 'true' && steps.meta.outputs.strategy == 'auto'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # A push made with GITHUB_TOKEN does not trigger workflows, so
+          # Validate would never run on the commit we just landed. Dispatch it
+          # explicitly to keep the default branch continuously verified.
+          gh workflow run validate.yml --ref "${{ github.event.repository.default_branch }}" \
+            && echo "Dispatched Validate on ${{ github.event.repository.default_branch }}" \
+            || echo "::warning::Could not dispatch Validate; the weekly schedule will still cover it."
 
       # --- update_strategy: pull-request -> open a PR for review -------------
       - name: Push branch and open pull request (update_strategy=pull-request)

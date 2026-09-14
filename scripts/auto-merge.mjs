@@ -181,6 +181,13 @@ if (process.env.GITHUB_STEP_SUMMARY) {
   appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
 }
 
+if (process.env.GITHUB_OUTPUT) {
+  appendFileSync(
+    process.env.GITHUB_OUTPUT,
+    `merged_count=${merged.length}\nerror_count=${errored.length}\n`,
+  );
+}
+
 // A PR waiting on checks is normal. A merge that was attempted and REJECTED is
 // not — fail the run so it surfaces instead of sitting silently in a green job.
 if (errored.length) {

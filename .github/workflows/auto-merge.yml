@@ -32,6 +32,9 @@ permissions:
   contents: write
   pull-requests: write
   checks: read
+  # A merge performed with GITHUB_TOKEN does not trigger workflows, so Validate
+  # must be dispatched explicitly afterwards to keep main continuously verified.
+  actions: write
 
 concurrency:
   group: auto-merge
@@ -54,6 +57,7 @@ jobs:
       - run: npm ci
 
       - name: Sweep open pull requests
+        id: sweep
         env:
           # AUTOMERGE_TOKEN is OPTIONAL. Without it everything still merges
           # except PRs that touch .github/workflows/: GITHUB_TOKEN is a GitHub
@@ -69,3 +73,12 @@ jobs:
           else
             node scripts/auto-merge.mjs
           fi
+
+      - name: Re-verify the default branch after merging
+        if: always() && steps.sweep.outputs.merged_count != '0' && steps.sweep.outputs.merged_count != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run validate.yml --ref "${{ github.event.repository.default_branch }}" \
+            && echo "Dispatched Validate after merging ${{ steps.sweep.outputs.merged_count }} PR(s)" \
+            || echo "::warning::Could not dispatch Validate; the weekly schedule will still cover it."
