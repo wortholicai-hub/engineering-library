@@ -27,19 +27,30 @@ const MANIFEST_RE =
   /(^|\/)(package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb)$/;
 
 /**
- * The commit currently pinned for a submodule, read from the git index.
- * `git ls-tree HEAD <path>` gives the gitlink SHA — this is the authoritative
- * record of what our repository actually references, independent of whether
- * the submodule happens to be checked out on this machine.
+ * The commit currently pinned for a submodule.
+ *
+ * Read from the git INDEX (`git ls-files -s`), not from HEAD. The index is
+ * what will actually be committed, so a staged-but-uncommitted submodule bump
+ * is visible here. That matters during a sync: `render-docs.mjs` regenerates
+ * the pinned-commit table after the bump is staged, and reading HEAD would
+ * emit the old SHA — leaving the docs stale the moment the PR merged.
+ *
+ * Falls back to HEAD if the path is not in the index.
  */
 export function pinnedSha(submodulePath) {
-  const out = execFileSync('git', ['ls-tree', 'HEAD', submodulePath], {
+  const fromIndex = execFileSync('git', ['ls-files', '-s', '--', submodulePath], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
   }).trim();
-  if (!out) return null;
-  const m = out.match(/^\d+\s+commit\s+([0-9a-f]{40})\s/);
-  return m ? m[1] : null;
+  const indexMatch = fromIndex.match(/^160000\s+([0-9a-f]{40})\s/);
+  if (indexMatch) return indexMatch[1];
+
+  const fromHead = execFileSync('git', ['ls-tree', 'HEAD', '--', submodulePath], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+  }).trim();
+  const headMatch = fromHead.match(/^\d+\s+commit\s+([0-9a-f]{40})\s/);
+  return headMatch ? headMatch[1] : null;
 }
 
 export async function checkSource(source) {
