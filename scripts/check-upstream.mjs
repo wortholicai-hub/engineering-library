@@ -19,8 +19,15 @@
 import { execFileSync } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
 import path from 'node:path';
-import { REPO_ROOT, submoduleSources, parseUpstream, loadRegistry } from './registry.mjs';
-import { compare, getRefHead, getLicenseAt, getLatestRelease } from './github.mjs';
+import {
+  REPO_ROOT,
+  submoduleSources,
+  referenceSources,
+  parseUpstream,
+  loadRegistry,
+  expectedSpdx,
+} from './registry.mjs';
+import { compare, getRefHead, getLicenseAt, getLatestRelease, getRepo } from './github.mjs';
 
 /** Dependency manifests we care about when reporting "did deps change?". */
 const MANIFEST_RE =
@@ -136,6 +143,91 @@ export async function checkSource(source) {
   return result;
 }
 
+/**
+ * Health check for a catalogued source whose code we do NOT ingest.
+ *
+ * There is no pinned commit here, so "drift" is meaningless. What can rot
+ * instead is the recommendation itself: the project gets archived, goes quiet,
+ * relicenses, or moves its development branch. Two API calls per source.
+ */
+export async function checkReference(source) {
+  const { owner, repo } = parseUpstream(source.upstream);
+  const result = {
+    name: source.name,
+    title: source.title,
+    group: source.group,
+    upstream: source.upstream,
+    ref: source.ref,
+    maturity: source.maturity ?? null,
+    archived: false,
+    defaultBranch: null,
+    trackedRefIsDefault: true,
+    quietDays: null,
+    latestRelease: null,
+    license: { declared: source.license, expected: expectedSpdx(source), upstream: null, ok: false },
+    status: 'ok',
+    warnings: [],
+    error: null,
+  };
+
+  try {
+    const data = await getRepo(owner, repo);
+    if (!data) {
+      result.status = 'unreachable';
+      result.error = `${owner}/${repo} not found — renamed, deleted or made private`;
+      return result;
+    }
+
+    result.archived = Boolean(data.archived);
+    result.defaultBranch = data.default_branch;
+    result.trackedRefIsDefault = data.default_branch === source.ref;
+    result.quietDays = data.pushed_at
+      ? Math.round((Date.now() - new Date(data.pushed_at).getTime()) / 86_400_000)
+      : null;
+
+    // The repository payload already carries the licence, so verifying it here
+    // costs nothing extra.
+    result.license.upstream = data.license?.spdx_id ?? null;
+    result.license.ok = result.license.upstream === result.license.expected;
+    if (!result.license.ok) {
+      result.status = 'relicensed';
+      result.warnings.push(
+        `licence is ${result.license.upstream ?? 'UNDETECTED'} upstream but the registry expects ` +
+          `${result.license.expected}`,
+      );
+    }
+
+    if (result.archived) {
+      if (result.status === 'ok') result.status = 'archived';
+      result.warnings.push('upstream is ARCHIVED — no fixes will ever land');
+    }
+    if (result.quietDays !== null && result.quietDays > 365) {
+      if (result.status === 'ok') result.status = 'quiet';
+      result.warnings.push(`no upstream push for ${result.quietDays} days`);
+    }
+    if (!result.trackedRefIsDefault) {
+      // Not a failure: Next.js is tracked on `canary` and Storybook on `next`
+      // deliberately. Worth showing so an unintended mismatch is visible.
+      result.warnings.push(
+        `registry tracks \`${source.ref}\`; upstream default branch is \`${result.defaultBranch}\``,
+      );
+    }
+
+    result.latestRelease = await getLatestRelease(owner, repo);
+  } catch (err) {
+    result.status = 'error';
+    result.error = err.message;
+  }
+
+  return result;
+}
+
+export async function checkCatalog({ only = null } = {}) {
+  let sources = referenceSources();
+  if (only) sources = sources.filter((s) => s.name === only);
+  return Promise.all(sources.map(checkReference));
+}
+
 export async function checkAll({ only = null } = {}) {
   const registry = loadRegistry();
   let sources = submoduleSources(registry);
@@ -174,10 +266,47 @@ function summarise(results) {
   return lines.join('\n');
 }
 
+function summariseCatalog(results) {
+  const lines = [];
+  for (const r of results) {
+    const icon = r.status === 'ok' ? '=' : r.status === 'error' || r.status === 'unreachable' || r.status === 'relicensed' ? '✗' : '!';
+    lines.push(`${icon} ${r.title} (${r.name})`);
+    lines.push(`    upstream : ${r.upstream} @ ${r.ref}`);
+    lines.push(`    activity : ${r.quietDays !== null ? `last push ${r.quietDays}d ago` : '—'}${r.archived ? '  ARCHIVED' : ''}`);
+    lines.push(`    release  : ${r.latestRelease ? `${r.latestRelease.tag} (${String(r.latestRelease.publishedAt).slice(0, 10)})` : '—'}`);
+    lines.push(`    licence  : ${r.license.upstream ?? '—'} ${r.license.ok ? '(matches registry)' : '(MISMATCH)'}`);
+    for (const w of r.warnings) lines.push(`    warning  : ${w}`);
+    if (r.error) lines.push(`    error    : ${r.error}`);
+    lines.push('');
+  }
+  const bad = results.filter((r) => r.status === 'relicensed' || r.status === 'unreachable' || r.status === 'error');
+  const warn = results.filter((r) => r.status === 'archived' || r.status === 'quiet');
+  lines.push(
+    `${results.length} catalogued source(s): ${results.length - bad.length - warn.length} healthy, ` +
+      `${warn.length} to review, ${bad.length} broken.`,
+  );
+  return lines.join('\n');
+}
+
 const isMain = process.argv[1] && path.resolve(process.argv[1]).endsWith('check-upstream.mjs');
 if (isMain) {
   const argv = process.argv.slice(2);
   const only = argv.includes('--source') ? argv[argv.indexOf('--source') + 1] : null;
+
+  // --catalog audits the sources whose code we do NOT ingest. They have no
+  // pinned commit to drift, so they get their own report.
+  if (argv.includes('--catalog')) {
+    const catalog = await checkCatalog({ only });
+    if (argv.includes('--json')) {
+      process.stdout.write(JSON.stringify(catalog, null, 2) + '\n');
+    } else {
+      console.log(summariseCatalog(catalog));
+    }
+    const broken = catalog.filter(
+      (r) => r.status === 'relicensed' || r.status === 'unreachable' || r.status === 'error',
+    );
+    process.exit(broken.length ? 2 : 0);
+  }
 
   const results = await checkAll({ only });
   const outdated = results.filter((r) => r.status === 'ahead' || r.status === 'diverged');

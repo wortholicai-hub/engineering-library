@@ -9,7 +9,9 @@
   },
   "scripts": {
     "validate:registry": "node scripts/registry.mjs --validate",
+    "vet": "node scripts/vet-source.mjs",
     "check:upstream": "node scripts/check-upstream.mjs",
+    "check:catalog": "node scripts/check-upstream.mjs --catalog",
     "sync:upstream": "node scripts/sync-upstream.mjs",
     "audit:licenses": "node scripts/license-audit.mjs",
     "docs:render": "node scripts/render-docs.mjs",

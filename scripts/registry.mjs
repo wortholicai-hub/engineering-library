@@ -24,15 +24,26 @@ const GITMODULES_PATH = path.join(REPO_ROOT, '.gitmodules');
 
 const VALID_SYNC_METHODS = new Set(['git-submodule', 'reference-only']);
 const VALID_UPDATE_STRATEGIES = new Set(['auto', 'pull-request']);
+/** Does OUR code compile against it? See the schema notes in sources.yml. */
+const VALID_COUPLINGS = new Set(['type-coupled', 'reference']);
+const VALID_MATURITIES = new Set(['standard', 'established', 'emerging']);
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * `internal_dir` is deliberately absent: it is required only for type-coupled
+ * sources, which is checked separately. A source nothing of ours imports has
+ * no internal directory to declare.
+ */
 const REQUIRED_FIELDS = [
   'name',
   'title',
   'category',
+  'group',
   'upstream',
   'ref',
   'sync_method',
+  'coupling',
   'update_strategy',
-  'internal_dir',
   'license',
   'license_ok',
   'enabled',
@@ -87,7 +98,7 @@ export function loadRegistry() {
     path: raw.path ?? null,
   }));
 
-  return { version: doc.version, defaults, sources };
+  return { version: doc.version, defaults, groups: doc.groups ?? [], sources };
 }
 
 export function enabledSources(registry = loadRegistry()) {
@@ -97,6 +108,37 @@ export function enabledSources(registry = loadRegistry()) {
 /** Sources whose code is actually ingested as a pinned git submodule. */
 export function submoduleSources(registry = loadRegistry()) {
   return enabledSources(registry).filter((s) => s.sync_method === 'git-submodule');
+}
+
+/**
+ * Enabled sources that are catalogued and monitored but whose code is NOT
+ * ingested. They have no pinned commit, so drift detection does not apply —
+ * what matters is whether they are still maintained and still licensed the way
+ * the registry claims.
+ */
+export function referenceSources(registry = loadRegistry()) {
+  return enabledSources(registry).filter((s) => s.sync_method === 'reference-only');
+}
+
+/**
+ * The SPDX id the GitHub API is expected to report for a source.
+ *
+ * Normally that is simply `license`. It differs only where GitHub cannot
+ * classify the licence file (SPDX `NOASSERTION`) and a human has read it
+ * instead: `license` then records the human conclusion and `license_detected`
+ * records what the API says, so the audit still detects a change rather than
+ * being permanently red or silently disabled.
+ */
+export function expectedSpdx(source) {
+  return source.license_detected ?? source.license;
+}
+
+/** Sources in a catalog group, in registry order. */
+export function sourcesByGroup(registry = loadRegistry()) {
+  return registry.groups.map((g) => ({
+    ...g,
+    sources: registry.sources.filter((s) => s.group === g.id),
+  }));
 }
 
 export function findSource(name, registry = loadRegistry()) {
@@ -130,8 +172,29 @@ export function validateRegistry() {
     return [`registry: ${err.message}`];
   }
 
+  // --- catalog groups -------------------------------------------------------
+  // Every source declares a group, and the generated catalog is rendered from
+  // the group list, so an unknown group would silently drop a source out of
+  // the documentation developers actually read.
+  const groupIds = new Set();
+  if (!Array.isArray(registry.groups) || registry.groups.length === 0) {
+    problems.push('registry: `groups:` must list at least one catalog group');
+  } else {
+    for (const g of registry.groups) {
+      if (!g?.id) {
+        problems.push('groups: every group needs an `id`');
+        continue;
+      }
+      if (groupIds.has(g.id)) problems.push(`groups: duplicate group id \`${g.id}\``);
+      groupIds.add(g.id);
+      if (!g.title) problems.push(`groups: \`${g.id}\` is missing a \`title\``);
+      if (!g.summary) problems.push(`groups: \`${g.id}\` is missing a \`summary\``);
+    }
+  }
+
   const seenNames = new Set();
   const seenPaths = new Set();
+  const usedGroups = new Set();
 
   for (const s of registry.sources) {
     const id = s.name ?? '<unnamed>';
@@ -145,8 +208,66 @@ export function validateRegistry() {
     if (seenNames.has(s.name)) problems.push(`${id}: duplicate source name`);
     seenNames.add(s.name);
 
+    if (s.group && !groupIds.has(s.group)) {
+      problems.push(
+        `${id}: group \`${s.group}\` is not declared in the top-level \`groups:\` list`,
+      );
+    }
+    usedGroups.add(s.group);
+
     if (!VALID_SYNC_METHODS.has(s.sync_method)) {
       problems.push(`${id}: invalid sync_method \`${s.sync_method}\``);
+    }
+
+    if (!VALID_COUPLINGS.has(s.coupling)) {
+      problems.push(
+        `${id}: invalid coupling \`${s.coupling}\` ` +
+          `(expected one of: ${[...VALID_COUPLINGS].join(', ')})`,
+      );
+    }
+
+    // Our code compiles against it, so there must be somewhere for that code
+    // to live — and the sync gate runs its tests.
+    if (s.coupling === 'type-coupled' && !s.internal_dir) {
+      problems.push(
+        `${id}: coupling=type-coupled requires an internal_dir — that package's ` +
+          `typecheck and tests are what prove an upstream bump did not break us`,
+      );
+    }
+
+    // A catalog entry nobody can read is dead weight.
+    if (s.enabled === true && !s.docs) {
+      problems.push(`${id}: enabled sources must declare a \`docs\` URL`);
+    }
+    for (const field of ['docs', 'upstream']) {
+      if (s[field] && !/^https:\/\//.test(String(s[field]))) {
+        problems.push(`${id}: \`${field}\` must be an https URL (got ${s[field]})`);
+      }
+    }
+
+    // A licence the API cannot classify is only acceptable with a recorded
+    // human reading of the actual licence text.
+    if (s.license_detected && !s.license_review) {
+      problems.push(
+        `${id}: license_detected is set, so \`license_review\` must record the ` +
+          `human decision that justifies it`,
+      );
+    }
+
+    if (s.maturity && !VALID_MATURITIES.has(s.maturity)) {
+      problems.push(
+        `${id}: invalid maturity \`${s.maturity}\` ` +
+          `(expected one of: ${[...VALID_MATURITIES].join(', ')})`,
+      );
+    }
+    if (s.vetted_at && !ISO_DATE_RE.test(String(s.vetted_at))) {
+      problems.push(`${id}: vetted_at must be YYYY-MM-DD (got ${s.vetted_at})`);
+    }
+    if (s.tags && (!Array.isArray(s.tags) || s.tags.some((t) => typeof t !== 'string'))) {
+      problems.push(`${id}: tags must be a list of strings`);
+    }
+    if (s.alternatives && !Array.isArray(s.alternatives)) {
+      problems.push(`${id}: alternatives must be a list of source names`);
     }
 
     try {
@@ -163,16 +284,24 @@ export function validateRegistry() {
     }
 
     // `auto` removes the human review step, so the validation gate becomes the
-    // only safeguard. A source may only run unattended if its licence was
-    // cleared AND it declares an internal_dir whose tests can act as that gate.
+    // only safeguard. A type-coupled source may only run unattended if it
+    // declares an internal_dir whose tests can act as that gate; for a
+    // reference source there is nothing of ours to break, and the guard plus
+    // the licence re-check are the whole gate.
     if (s.update_strategy === 'auto' && s.enabled === true) {
       if (s.license_ok !== true) {
         problems.push(`${id}: update_strategy=auto requires license_ok: true`);
       }
-      if (!s.internal_dir) {
+      if (s.coupling === 'type-coupled' && !s.internal_dir) {
         problems.push(
           `${id}: update_strategy=auto requires an internal_dir — its tests are ` +
             `the only gate protecting the default branch`,
+        );
+      }
+      if (s.sync_method === 'reference-only') {
+        problems.push(
+          `${id}: update_strategy=auto is meaningless for a reference-only source ` +
+            `(there is no pinned commit to move) — use pull-request`,
         );
       }
     }
@@ -210,6 +339,24 @@ export function validateRegistry() {
       }
     } else if (s.path) {
       problems.push(`${id}: reference-only sources must not declare a \`path\``);
+    }
+  }
+
+  // `alternatives` is how a developer is pointed from the wrong choice to the
+  // right one, so a stale name there is a dead end in the catalog.
+  for (const s of registry.sources) {
+    for (const alt of s.alternatives ?? []) {
+      if (!seenNames.has(alt)) {
+        problems.push(`${s.name}: alternatives references unknown source \`${alt}\``);
+      }
+      if (alt === s.name) problems.push(`${s.name}: lists itself as an alternative`);
+    }
+  }
+
+  // An empty group renders as an empty section in the generated catalog.
+  for (const g of registry.groups ?? []) {
+    if (g?.id && !usedGroups.has(g.id)) {
+      problems.push(`groups: \`${g.id}\` has no sources — remove it or populate it`);
     }
   }
 

@@ -19,7 +19,7 @@
 
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { REPO_ROOT, loadRegistry, parseUpstream } from './registry.mjs';
+import { REPO_ROOT, loadRegistry, parseUpstream, expectedSpdx } from './registry.mjs';
 import { getLicenseAt } from './github.mjs';
 import { pinnedSha } from './check-upstream.mjs';
 
@@ -54,6 +54,9 @@ for (const s of registry.sources) {
     name: s.name,
     title: s.title,
     declared: s.license,
+    // What the API is expected to report — differs from `declared` only where
+    // a human read a licence GitHub could not classify.
+    expected: expectedSpdx(s),
     enabled: s.enabled,
     licenseOk: s.license_ok,
     localFiles: null,
@@ -95,16 +98,27 @@ for (const s of registry.sources) {
   }
 
   // --- remote: SPDX must still match the registry -------------------------
-  if (remote && s.sync_method === 'git-submodule' && s.path) {
+  // Reference-only sources are audited too. We ingest none of their code, but
+  // the catalog tells developers they may use them, so a relicensing there is
+  // exactly as consequential as one in a submodule — it is just harder to
+  // notice, because nothing on disk changes.
+  if (remote) {
     const { owner, repo } = parseUpstream(s.upstream);
-    const ref = pinnedSha(s.path) ?? s.ref;
+    // Submodule sources are checked at the commit we actually pinned;
+    // reference-only sources have no pinned commit, so the tracked branch is
+    // the only meaningful reference point.
+    const ref = (s.path ? pinnedSha(s.path) : null) ?? s.ref;
+    const expected = expectedSpdx(s);
     try {
       const lic = await getLicenseAt(owner, repo, ref);
       row.remoteSpdx = lic.spdx ?? 'UNDETECTED';
-      if (lic.spdx !== s.license) {
+      if (lic.spdx !== expected) {
         problems.push(
-          `${s.name}: upstream SPDX is ${lic.spdx ?? 'UNDETECTED'} at pinned commit ` +
-            `but sources.yml declares ${s.license}`,
+          `${s.name}: upstream SPDX is ${lic.spdx ?? 'UNDETECTED'} at ${String(ref).slice(0, 10)} ` +
+            `but sources.yml expects ${expected}` +
+            (s.license_detected
+              ? ` (declared ${s.license} after a recorded human licence review — re-read the licence file)`
+              : ''),
         );
         row.verdict = 'RELICENSED';
       }
@@ -120,7 +134,10 @@ for (const s of registry.sources) {
 console.log('Licence audit\n');
 for (const r of rows) {
   console.log(`  ${r.verdict === 'ok' ? '✓' : r.verdict === 'not-ingested' ? '·' : '✗'} ${r.title}`);
-  console.log(`      declared : ${r.declared}  (license_ok=${r.licenseOk}, enabled=${r.enabled})`);
+  console.log(
+    `      declared : ${r.declared}  (license_ok=${r.licenseOk}, enabled=${r.enabled})` +
+      (r.expected !== r.declared ? `  [API reports ${r.expected} — human-reviewed]` : ''),
+  );
   if (r.localFiles !== null) console.log(`      local    : ${r.localFiles}`);
   if (r.remoteSpdx !== null) console.log(`      upstream : ${r.remoteSpdx}`);
   console.log(`      verdict  : ${r.verdict}`);

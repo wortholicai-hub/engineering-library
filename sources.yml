@@ -5,26 +5,64 @@
 # Engineering Library tracks. Humans read it; automation parses it.
 #
 # Nothing in .github/workflows or scripts/ hardcodes a technology name.
-# Adding a source here (plus `git submodule add`) is all that is required to
-# bring it into the sync system. See docs/adding-a-source.md.
+# Adding a source here (plus `git submodule add` when its code is ingested) is
+# all that is required to bring it into the sync system.
+# See docs/adding-a-source.md.
 #
 # Schema is enforced by scripts/registry.mjs (run: npm run validate:registry).
+# Candidates are vetted with scripts/vet-source.mjs BEFORE they are added here
+# (run: npm run vet -- owner/repo) — licence, maintenance and weight are
+# checked against the GitHub API, never assumed.
+# -----------------------------------------------------------------------------
+# THE TWO AXES
+#
+#   sync_method  — is the upstream CODE ingested?
+#     git-submodule   Pinned gitlink. The code is on disk, read-only, at an
+#                     exact commit. Choose this when reading the source is
+#                     genuinely useful (API truth, a starter to copy from).
+#     reference-only  Nothing is ingested. The library records the repository,
+#                     its licence, its docs and our house guidance, and the
+#                     automation monitors it for releases, archival and
+#                     relicensing. Choose this for anything consumed from npm
+#                     or too heavy to clone in CI (see SUBMODULE_SIZE_LIMIT_KB
+#                     in scripts/vet-source.mjs).
+#
+#   coupling     — does OUR code depend on it?
+#     type-coupled    Our internal package compiles against its types. An
+#                     upstream change can break us, so the sync runs that
+#                     package's typecheck + tests as the gate. Requires
+#                     `internal_dir`.
+#     reference       Nothing of ours compiles against it, so an upstream bump
+#                     cannot break our build. `internal_dir` may be null.
+#
+# These are independent: a starter template is `git-submodule` + `reference`
+# (its code is on disk to read, but nothing of ours imports it).
 # -----------------------------------------------------------------------------
 # FIELD REFERENCE
 #   name          Unique slug. Also used in sync branch names.
+#   title         Human name.
 #   category      Top-level library section (frontend, backend, ai, ...).
+#   group         Catalog group. MUST match an id in the `groups:` list below.
 #   upstream      Canonical HTTPS URL of the OFFICIAL upstream repository.
 #   ref           Upstream branch we track. NOT assumed to be "main" —
-#                 Chart.js tracks "master", shadcn/ui tracks "main".
-#   sync_method   How upstream code enters the library. See docs/architecture.md.
-#                 "git-submodule"  -> pinned gitlink, never vendored/copied.
-#                 "reference-only" -> recorded + monitored, no code ingested.
+#                 Chart.js tracks "master", Next.js tracks "canary".
+#   sync_method   See above.
+#   coupling      See above.
 #   path          Where the upstream code lives. For git-submodule this MUST
 #                 match the submodule path in .gitmodules (validated).
+#                 Always null for reference-only.
 #   internal_dir  Where OUR OWN code for this technology lives. The sync
 #                 automation is forbidden from writing anywhere inside it.
+#   docs          Official documentation URL. Required for every enabled
+#                 source — a catalog entry nobody can read is useless.
+#   install       The command that adds it to a product repository.
 #   license       SPDX id verified against the GitHub API at registration time
 #                 and re-verified on every sync (license regression detection).
+#   license_detected  Only when GitHub CANNOT classify the licence (SPDX
+#                 `NOASSERTION`). Records what the API reports so the audit can
+#                 still detect change, while `license` records what a human
+#                 read. Requires `license_review`.
+#   license_review    The human decision that justifies `license_detected`.
 #   license_ok    Whether the license permits our intended use (reference +
 #                 derive internal wrappers with attribution).
 #   enabled       false => excluded from automated sync. Reason must be given.
@@ -36,6 +74,18 @@
 #                 "pull-request" -> open a PR and wait for a human to merge.
 #                 Switching a source to "pull-request" is the way to put a
 #                 human back in the loop for a risky dependency.
+#   maturity      standard | established | emerging. `standard` means "pick
+#                 this unless you have a reason not to".
+#   use_when      One line: when this is the right choice.
+#   avoid_when    One line: when it is the wrong choice. Kept deliberately —
+#                 a catalog that only lists strengths cannot be used to decide.
+#   alternatives  Names of other sources in this registry that solve the same
+#                 problem.
+#   tags          Free-form search keywords for humans and agents.
+#   vetted_at     Date the licence + maintenance status were last verified
+#                 against the GitHub API with scripts/vet-source.mjs.
+#   maintenance_note  Recorded when a source is stable-but-quiet or carries a
+#                 maintenance risk. Honesty beats a clean-looking table.
 # =============================================================================
 
 version: 1
@@ -44,87 +94,1458 @@ defaults:
   sync_method: git-submodule
   # Fully autonomous by default: detect -> validate -> commit to main.
   update_strategy: auto
+  # Most sources are reference material; type-coupling is the exception and is
+  # always declared explicitly.
+  coupling: reference
   # How far back to summarise upstream commits in the commit/PR body.
   pr_commit_preview: 20
 
+# -----------------------------------------------------------------------------
+# CATALOG GROUPS
+# Ordered as a developer should read them: what renders your UI, what gives it
+# behaviour, what moves your data, then everything around it.
+# docs/frontend-catalog.md is generated from these.
+# -----------------------------------------------------------------------------
+groups:
+  - id: component-systems
+    title: Complete component systems
+    summary: >-
+      Batteries-included libraries that ship a themed component for almost
+      everything. Fastest route to a working product UI; you adopt their design
+      language and their styling engine.
+
+  - id: tailwind-systems
+    title: Tailwind-native component systems
+    summary: >-
+      Components built on Tailwind utility classes. You own the code (copy-in)
+      or the classes (plugin), so restyling never means fighting a theme API.
+
+  - id: headless
+    title: Headless primitives and accessibility
+    summary: >-
+      Unstyled, fully accessible behaviour — focus traps, keyboard navigation,
+      ARIA wiring. The layer underneath shadcn/ui and every serious design
+      system. Use these when your brand cannot look like anyone else's.
+
+  - id: data
+    title: Data, forms, state and validation
+    summary: >-
+      The non-visual half of a frontend: fetching and caching, tables, forms,
+      schema validation, client state, routing.
+
+  - id: charts
+    title: Charts and data visualisation
+    summary: Rendering numbers. Canvas, SVG and dashboard-oriented options.
+
+  - id: interaction
+    title: Motion, icons and rich interaction
+    summary: >-
+      Animation, icon sets, drag and drop, rich text, command palettes, toasts,
+      drawers and resizable panels — the pieces a product needs once the
+      skeleton works.
+
+  - id: templates
+    title: Production starter templates
+    summary: >-
+      Whole applications, not components. Clone one of these when starting a
+      new product: auth, billing, database, CI and project structure are
+      already wired together by people who ship.
+
+  - id: platform
+    title: Framework, styling and quality tooling
+    summary: >-
+      The foundation every frontend here sits on — framework, CSS engine,
+      component workshop, end-to-end testing.
+
 sources:
-  # ---------------------------------------------------------------------------
+  # ===========================================================================
+  # TAILWIND-NATIVE COMPONENT SYSTEMS
+  # ===========================================================================
   - name: shadcn-ui
     title: shadcn/ui
     category: frontend
+    group: tailwind-systems
     upstream: https://github.com/shadcn-ui/ui
     ref: main
     sync_method: git-submodule
+    coupling: type-coupled
     path: frontend/shadcn/upstream/ui
     internal_dir: frontend/shadcn/templates
+    docs: https://ui.shadcn.com
+    install: npx shadcn@latest init
     license: MIT
     license_ok: true
     enabled: true
     update_strategy: auto
+    maturity: standard
+    vetted_at: '2026-09-15'
     description: >-
-      Composable, accessible React components. Source of truth for component
-      anatomy, Tailwind class conventions and the `cn` utility pattern.
+      Composable, accessible React components you copy into your own codebase
+      rather than install. Built on Radix primitives + Tailwind. Source of
+      truth for component anatomy, Tailwind class conventions and the `cn`
+      utility pattern.
+    use_when: >-
+      Default choice for any new React product UI where the design must be ours
+      and the components must be editable.
+    avoid_when: >-
+      You need a full themed component set out of the box with no design work —
+      use Mantine or MUI instead.
+    alternatives: [mantine, mui-material, heroui, flowbite-react]
+    tags: [components, tailwind, radix, react, copy-paste, blocks, dashboard]
     used_for:
       - React component primitives and their accessibility semantics
       - Tailwind design-token and variant conventions
       - Reference implementation for our internal wrappers
+      - Blocks: dashboards, sidebars, login screens, data tables
 
-  # ---------------------------------------------------------------------------
-  - name: chartjs
-    title: Chart.js
+  - name: daisyui
+    title: daisyUI
     category: frontend
-    upstream: https://github.com/chartjs/Chart.js
-    ref: master            # NOTE: master, not main.
+    group: tailwind-systems
+    upstream: https://github.com/saadeghi/daisyui
+    ref: master
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://daisyui.com
+    install: npm i -D daisyui@latest
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      A Tailwind CSS plugin that adds semantic component class names
+      (`btn`, `card`, `modal`) plus a large set of themes. Pure CSS: no
+      JavaScript, no React dependency.
+    use_when: >-
+      You want good-looking components fast in any framework, or a themeable
+      marketing site, without shipping component JavaScript.
+    avoid_when: >-
+      You need accessible interactive behaviour — daisyUI styles markup, it
+      does not manage focus, keyboard or ARIA. Pair it with headless
+      primitives, or use shadcn/ui.
+    alternatives: [shadcn-ui, flowbite-react]
+    tags: [tailwind, css, themes, plugin, framework-agnostic]
+
+  - name: flowbite-react
+    title: Flowbite React
+    category: frontend
+    group: tailwind-systems
+    upstream: https://github.com/themesberg/flowbite-react
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://flowbite-react.com/docs/getting-started/introduction
+    install: npx flowbite-react@latest init
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: established
+    vetted_at: '2026-09-15'
+    description: >-
+      Tailwind-based React component library with a large catalogue of
+      ready-made blocks — navbars, sidebars, CRUD tables, pricing sections,
+      authentication screens.
+    use_when: >-
+      Building an internal tool or admin area quickly and the standard
+      Flowbite look is acceptable.
+    avoid_when: >-
+      The product needs a distinctive design system; you will spend longer
+      overriding than composing.
+    alternatives: [shadcn-ui, daisyui, mantine]
+    tags: [tailwind, react, components, admin, blocks]
+
+  - name: magic-ui
+    title: Magic UI
+    category: frontend
+    group: tailwind-systems
+    upstream: https://github.com/magicuidesign/magicui
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://magicui.design/docs
+    install: npx shadcn@latest add "https://magicui.design/r/marquee.json"
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: established
+    vetted_at: '2026-09-15'
+    description: >-
+      150+ animated components distributed through the shadcn CLI — marquees,
+      beams, number tickers, gradient text, hero sections. Drops into an
+      existing shadcn/ui project with no new runtime concepts.
+    use_when: Landing pages and marketing surfaces that need motion without bespoke animation work.
+    avoid_when: >-
+      Dense application UI — the animation budget belongs on the marketing
+      site, not on a data table.
+    alternatives: [motion]
+    tags: [animation, landing-page, marketing, shadcn, tailwind, motion]
+
+  - name: tremor
+    title: Tremor
+    category: frontend
+    group: tailwind-systems
+    upstream: https://github.com/tremorlabs/tremor
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://tremor.so
+    install: npm i @tremor/react
+    license: Apache-2.0
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: established
+    vetted_at: '2026-09-15'
+    maintenance_note: >-
+      No upstream push for ~340 days as of the vetting date. Treat as
+      feature-complete rather than actively developed, and prefer
+      Chart.js/Recharts for the charting layer of anything long-lived.
+    description: >-
+      Dashboard-oriented React components — KPI cards, trackers, bar lists and
+      charts — designed to look right together with minimal configuration.
+    use_when: An internal analytics dashboard is needed in days, not weeks.
+    avoid_when: The dashboard is a long-lived core product surface (see the maintenance note).
+    alternatives: [shadcn-ui, recharts, chartjs]
+    tags: [dashboard, analytics, kpi, charts, tailwind, react]
+
+  # ===========================================================================
+  # COMPLETE COMPONENT SYSTEMS
+  # ===========================================================================
+  - name: mui-material
+    title: MUI (Material UI)
+    category: frontend
+    group: component-systems
+    upstream: https://github.com/mui/material-ui
+    ref: master
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://mui.com/material-ui/getting-started/
+    install: npm i @mui/material @emotion/react @emotion/styled
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      The most widely deployed React component library. Implements Material
+      Design, with an enormous component surface, a mature theming system and
+      commercial add-ons (Data Grid Pro, Date Pickers, Charts).
+    use_when: >-
+      Enterprise or internal applications where breadth, documentation and
+      hiring pool matter more than visual differentiation — and when you want
+      a supported paid data grid rather than building one.
+    avoid_when: >-
+      You are already on Tailwind, or the brand must not read as Material
+      Design. Runtime CSS-in-JS also costs more than utility classes.
+    alternatives: [ant-design, mantine, chakra-ui, shadcn-ui]
+    tags: [react, material-design, enterprise, data-grid, theming, components]
+
+  - name: ant-design
+    title: Ant Design
+    category: frontend
+    group: component-systems
+    upstream: https://github.com/ant-design/ant-design
+    ref: master
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://ant.design/components/overview/
+    install: npm i antd
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      Enterprise-grade React component system from Ant Group. Exceptional
+      coverage of dense data UI: tables with filters and grouping, complex
+      forms, transfer lists, tree selects.
+    use_when: >-
+      Back-office, admin and data-heavy internal tools — its table and form
+      components are the strongest in the ecosystem out of the box.
+    avoid_when: Consumer-facing products where the Ant look is hard to shake off, or when bundle size is critical.
+    alternatives: [mui-material, mantine, primereact]
+    tags: [react, enterprise, admin, tables, forms, back-office]
+
+  - name: mantine
+    title: Mantine
+    category: frontend
+    group: component-systems
+    upstream: https://github.com/mantinedev/mantine
+    ref: master
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://mantine.dev
+    install: npm i @mantine/core @mantine/hooks
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      120+ components and 70+ hooks with first-class TypeScript, a genuinely
+      good dark mode, and built-in form, notification, modal-manager and
+      date-picker packages. CSS modules rather than runtime CSS-in-JS.
+    use_when: >-
+      You want a complete, modern component set with no design work and no
+      Tailwind — the fastest path from zero to a polished internal product.
+    avoid_when: >-
+      The team is standardised on Tailwind, or you need the component code
+      itself to be editable in-repo.
+    alternatives: [mui-material, chakra-ui, shadcn-ui]
+    tags: [react, components, hooks, typescript, dark-mode, forms, dates]
+
+  - name: chakra-ui
+    title: Chakra UI
+    category: frontend
+    group: component-systems
+    upstream: https://github.com/chakra-ui/chakra-ui
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://chakra-ui.com/docs/get-started/installation
+    install: npm i @chakra-ui/react @emotion/react
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      Accessible React components with a style-props API and a strong design
+      token system. Built on Ark UI, so behaviour and accessibility come from
+      the same state machines.
+    use_when: Teams that like composing with style props and want accessibility handled by default.
+    avoid_when: You prefer utility classes (Tailwind) or need the widest possible component catalogue.
+    alternatives: [mantine, mui-material, ark-ui]
+    tags: [react, accessibility, design-tokens, style-props, components]
+
+  - name: primereact
+    title: PrimeReact
+    category: frontend
+    group: component-systems
+    upstream: https://github.com/primefaces/primereact
+    ref: master
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://primereact.org
+    install: npm i primereact primeicons
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: established
+    vetted_at: '2026-09-15'
+    description: >-
+      Very large component suite (80+) from PrimeFaces, including the kind of
+      components most libraries skip: org charts, Gantt-style timelines,
+      tree tables, spreadsheet-like data tables, file uploaders.
+    use_when: >-
+      An enterprise app needs an unusual heavy component and you would
+      otherwise build it from scratch.
+    avoid_when: You only need the common 20 components — lighter libraries will be easier to theme.
+    alternatives: [ant-design, mui-material]
+    tags: [react, enterprise, components, tree-table, org-chart, file-upload]
+
+  - name: heroui
+    title: HeroUI
+    category: frontend
+    group: component-systems
+    upstream: https://github.com/heroui-inc/heroui
+    ref: v3
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://www.heroui.com/docs/guide/introduction
+    install: npm i @heroui/react
+    license: Apache-2.0
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: established
+    vetted_at: '2026-09-15'
+    description: >-
+      Modern React component library (formerly NextUI) built on Tailwind and
+      React Aria — accessible behaviour with a polished default aesthetic.
+      Tracked on the `v3` branch, which is where development happens.
+    use_when: >-
+      A consumer-facing product that should look designed on day one while
+      keeping Tailwind and accessible primitives.
+    avoid_when: >-
+      You want the component source in your own repo — HeroUI is installed,
+      not copied in. Note the major version in flight; pin carefully.
+    alternatives: [shadcn-ui, mantine, react-aria]
+    tags: [react, tailwind, react-aria, components, nextui]
+
+  # ===========================================================================
+  # HEADLESS PRIMITIVES AND ACCESSIBILITY
+  # ===========================================================================
+  - name: radix-primitives
+    title: Radix Primitives
+    category: frontend
+    group: headless
+    upstream: https://github.com/radix-ui/primitives
+    ref: main
     sync_method: git-submodule
-    path: frontend/chartjs/upstream/Chart.js
-    internal_dir: frontend/chartjs/examples
+    coupling: reference
+    path: frontend/headless/upstream/radix-primitives
+    internal_dir: null
+    docs: https://www.radix-ui.com/primitives
+    install: npm i radix-ui
     license: MIT
     license_ok: true
     enabled: true
     update_strategy: auto
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      Unstyled, accessible React primitives — dialog, popover, select, menu,
+      tooltip — with correct focus management, keyboard interaction and ARIA.
+      This is what shadcn/ui is built on, so it is the authoritative answer to
+      "why does this component behave like that?".
+    use_when: >-
+      Building a custom component that needs real accessibility, or debugging
+      the behaviour of a shadcn/ui component.
+    avoid_when: You want something that already looks finished — Radix ships zero styles by design.
+    alternatives: [headless-ui, react-aria, base-ui, ark-ui]
+    tags: [headless, accessibility, a11y, primitives, react, wai-aria, focus]
+    used_for:
+      - Accessibility and keyboard-interaction reference for our own components
+      - Understanding the behaviour underneath shadcn/ui
+
+  - name: headless-ui
+    title: Headless UI
+    category: frontend
+    group: headless
+    upstream: https://github.com/tailwindlabs/headlessui
+    ref: main
+    sync_method: git-submodule
+    coupling: reference
+    path: frontend/headless/upstream/headlessui
+    internal_dir: null
+    docs: https://headlessui.com
+    install: npm i @headlessui/react
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: auto
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      Unstyled accessible components from the Tailwind team, designed to be
+      styled entirely with utility classes. Smaller surface than Radix but
+      pairs naturally with Tailwind UI markup.
+    use_when: A Tailwind project needs a handful of accessible interactive components and nothing more.
+    avoid_when: You need the breadth Radix covers, or you are already using shadcn/ui (which brings Radix).
+    alternatives: [radix-primitives, react-aria]
+    tags: [headless, tailwind, accessibility, react, dropdown, dialog, combobox]
+    used_for:
+      - Tailwind-idiomatic accessible component patterns
+
+  - name: react-aria
+    title: React Aria (Adobe)
+    category: frontend
+    group: headless
+    upstream: https://github.com/adobe/react-spectrum
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://react-spectrum.adobe.com/react-aria/
+    install: npm i react-aria-components
+    license: Apache-2.0
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      The most rigorous accessibility implementation in the React ecosystem:
+      hooks and components covering internationalisation, right-to-left
+      layouts, screen readers, touch and keyboard, from Adobe's Spectrum team.
+    use_when: >-
+      Accessibility is a contractual or regulatory requirement (public sector,
+      enterprise procurement, WCAG audits), or you need full i18n/RTL support.
+    avoid_when: A small project that only needs a dropdown — the API surface is large.
+    alternatives: [radix-primitives, headless-ui, base-ui]
+    tags: [accessibility, a11y, wcag, i18n, rtl, headless, hooks, react]
+
+  - name: base-ui
+    title: Base UI
+    category: frontend
+    group: headless
+    upstream: https://github.com/mui/base-ui
+    ref: master
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://base-ui.com/react/overview/quick-start
+    install: npm i @base-ui-components/react
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: emerging
+    vetted_at: '2026-09-15'
+    description: >-
+      Unstyled accessible primitives from the MUI team, with contributors from
+      Radix and Floating UI. Modern API, actively developed.
+    use_when: Starting something new that wants headless primitives and you are happy tracking a young API.
+    avoid_when: >-
+      A production system that must not absorb breaking changes — prefer Radix
+      until Base UI has a longer stability record.
+    alternatives: [radix-primitives, ark-ui, react-aria]
+    tags: [headless, accessibility, primitives, react, mui]
+
+  - name: ark-ui
+    title: Ark UI
+    category: frontend
+    group: headless
+    upstream: https://github.com/chakra-ui/ark
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://ark-ui.com
+    install: npm i @ark-ui/react
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: established
+    vetted_at: '2026-09-15'
+    description: >-
+      Headless components driven by Zag.js state machines, available for React,
+      Vue and Solid with the same behaviour in each. Powers Chakra UI v3.
+    use_when: You need one design system to work across more than one framework.
+    avoid_when: A React-only codebase — Radix is more widely used and better documented for that case.
+    alternatives: [radix-primitives, react-aria, base-ui]
+    tags: [headless, state-machine, react, vue, solid, cross-framework]
+
+  # ===========================================================================
+  # DATA, FORMS, STATE AND VALIDATION
+  # ===========================================================================
+  - name: tanstack-table
+    title: TanStack Table
+    category: frontend
+    group: data
+    upstream: https://github.com/TanStack/table
+    ref: main
+    sync_method: git-submodule
+    coupling: type-coupled
+    path: frontend/data/upstream/table
+    internal_dir: frontend/data/patterns
+    docs: https://tanstack.com/table/latest
+    install: npm i @tanstack/react-table
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: auto
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      Headless table logic — sorting, filtering, pagination, grouping, column
+      visibility, row selection — with no markup of its own. The table engine
+      shadcn/ui's data-table blocks are built on.
+    use_when: Any table beyond a static list. Our own column/state helpers in `frontend/data/patterns` wrap it.
+    avoid_when: >-
+      You need a fully rendered spreadsheet grid with editing out of the box —
+      that is MUI Data Grid Pro or AG Grid territory.
+    alternatives: [ant-design, mui-material]
+    tags: [table, datagrid, sorting, filtering, pagination, headless, react]
+    used_for:
+      - Column definition and table-state API our internal helpers are typed against
+
+  - name: react-hook-form
+    title: React Hook Form
+    category: frontend
+    group: data
+    upstream: https://github.com/react-hook-form/react-hook-form
+    ref: master
+    sync_method: git-submodule
+    coupling: type-coupled
+    path: frontend/data/upstream/react-hook-form
+    internal_dir: frontend/data/patterns
+    docs: https://react-hook-form.com
+    install: npm i react-hook-form @hookform/resolvers
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: auto
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      Uncontrolled-input form library: minimal re-renders, small runtime, and
+      a resolver interface that plugs straight into Zod for validation.
+    use_when: Every form. Combine with Zod through `@hookform/resolvers/zod`.
+    avoid_when: A single-field search box — plain state is simpler.
+    alternatives: [mantine, tanstack-table]
+    tags: [forms, validation, react, performance, resolver, zod]
+    used_for:
+      - Form and resolver typings our internal form helpers conform to
+
+  - name: zod
+    title: Zod
+    category: frontend
+    group: data
+    upstream: https://github.com/colinhacks/zod
+    ref: main
+    sync_method: git-submodule
+    coupling: type-coupled
+    path: frontend/data/upstream/zod
+    internal_dir: frontend/data/patterns
+    docs: https://zod.dev
+    install: npm i zod
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: auto
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      TypeScript-first schema validation where the static type is inferred from
+      the schema, so one definition validates at runtime and types at compile
+      time. The shared contract between forms, API routes and env config.
+    use_when: >-
+      Validating anything crossing a boundary — form input, API request/response,
+      environment variables, LLM output.
+    avoid_when: Almost never in a TypeScript codebase.
+    alternatives: [react-hook-form]
+    tags: [validation, schema, typescript, inference, forms, api, env]
+    used_for:
+      - Schema and inference API our internal validation helpers are typed against
+
+  - name: tanstack-query
+    title: TanStack Query
+    category: frontend
+    group: data
+    upstream: https://github.com/TanStack/query
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://tanstack.com/query/latest
+    install: npm i @tanstack/react-query
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      Server-state manager: caching, background refetching, deduplication,
+      pagination, optimistic updates and retry policy. Removes most of the
+      reason teams reach for a global state library.
+    use_when: Any client that talks to an API. Reach for this before Redux or a hand-rolled fetch layer.
+    avoid_when: >-
+      Data that is purely local and never fetched — that is Zustand's job. In
+      a React Server Components app, fetch on the server first and use Query
+      for interactive/polling surfaces.
+    alternatives: [zustand]
+    tags: [data-fetching, cache, server-state, async, react, pagination, retry]
+
+  - name: tanstack-router
+    title: TanStack Router
+    category: frontend
+    group: data
+    upstream: https://github.com/TanStack/router
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://tanstack.com/router/latest
+    install: npm i @tanstack/react-router
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: established
+    vetted_at: '2026-09-15'
+    description: >-
+      Fully type-safe router for React SPAs, including typed search parameters,
+      loaders and nested routes.
+    use_when: A client-rendered SPA (Vite) where route and search-param typing matter.
+    avoid_when: You are on Next.js — its App Router already owns routing.
+    alternatives: [nextjs]
+    tags: [router, spa, type-safe, vite, search-params, loaders]
+
+  - name: tanstack-virtual
+    title: TanStack Virtual
+    category: frontend
+    group: data
+    upstream: https://github.com/TanStack/virtual
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://tanstack.com/virtual/latest
+    install: npm i @tanstack/react-virtual
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: established
+    vetted_at: '2026-09-15'
+    description: Headless virtualisation for long lists and large tables — renders only what is on screen.
+    use_when: A list or table passes a few thousand rows and scrolling starts to stutter.
+    avoid_when: Under ~1000 rows; virtualisation costs complexity (and breaks Ctrl+F) for no gain.
+    alternatives: [tanstack-table]
+    tags: [virtualisation, performance, long-list, scrolling, react]
+
+  - name: zustand
+    title: Zustand
+    category: frontend
+    group: data
+    upstream: https://github.com/pmndrs/zustand
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://zustand.docs.pmnd.rs
+    install: npm i zustand
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      Minimal client-state store — a hook, no provider, no boilerplate, with
+      selector-based subscriptions that avoid needless re-renders.
+    use_when: Genuinely global client state — theme, sidebar, wizard progress, editor buffers.
+    avoid_when: The state is server data (use TanStack Query) or lives in one component (use useState).
+    alternatives: [tanstack-query]
+    tags: [state, store, hooks, react, global-state, lightweight]
+
+  # ===========================================================================
+  # CHARTS AND DATA VISUALISATION
+  # ===========================================================================
+  - name: chartjs
+    title: Chart.js
+    category: frontend
+    group: charts
+    upstream: https://github.com/chartjs/Chart.js
+    ref: master            # NOTE: master, not main.
+    sync_method: git-submodule
+    coupling: type-coupled
+    path: frontend/chartjs/upstream/Chart.js
+    internal_dir: frontend/chartjs/examples
+    docs: https://www.chartjs.org/docs/latest/
+    install: npm i chart.js react-chartjs-2
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: auto
+    maturity: standard
+    vetted_at: '2026-09-15'
     description: >-
       Canvas-based charting library. Canonical reference for chart options,
       scales, plugins and the public typings our presets are built against.
+    use_when: >-
+      Dashboards and reports — our house presets in `frontend/chartjs/examples`
+      already cover palette, axes and tooltips.
+    avoid_when: >-
+      You need each datum to be a DOM node (custom hover targets, CSS
+      animation, SSR-friendly markup) — use Recharts.
+    alternatives: [recharts, echarts, tremor]
+    tags: [charts, canvas, dashboard, line, bar, doughnut, performance]
     used_for:
       - Chart option/scale/plugin API surface
       - Upstream TypeScript typings our internal presets conform to
 
-  # ---------------------------------------------------------------------------
   - name: react-chartjs-2
     title: react-chartjs-2
     category: frontend
+    group: charts
     upstream: https://github.com/reactchartjs/react-chartjs-2
     ref: master            # NOTE: master, not main.
     sync_method: git-submodule
+    coupling: type-coupled
     path: frontend/chartjs/upstream/react-chartjs-2
     internal_dir: frontend/chartjs/examples
+    docs: https://react-chartjs-2.js.org
+    install: npm i react-chartjs-2 chart.js
     license: MIT
     license_ok: true
     enabled: true
     update_strategy: auto
+    maturity: standard
+    vetted_at: '2026-09-15'
     description: >-
       Official React bindings for Chart.js. Included because Chart.js alone is
       not directly usable in our React frontends.
+    use_when: Rendering any Chart.js chart inside React.
+    avoid_when: Non-React frontends — use Chart.js directly.
     related_to: chartjs
+    alternatives: [recharts]
+    tags: [charts, react, bindings, canvas]
     used_for:
       - React component wrappers (<Line>, <Bar>, <Doughnut>) and their props
       - Ref/lifecycle handling for charts in React
 
-  # ---------------------------------------------------------------------------
-  # DISABLED — kept in the registry deliberately so the license decision is
-  # recorded and auditable rather than silently forgotten.
+  - name: recharts
+    title: Recharts
+    category: frontend
+    group: charts
+    upstream: https://github.com/recharts/recharts
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://recharts.org
+    install: npm i recharts
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      SVG charting built from composable React components (`<LineChart>`,
+      `<XAxis>`, `<Tooltip>`). The charting layer used by the shadcn/ui chart
+      blocks, so it themes with CSS variables like everything else.
+    use_when: >-
+      A React + Tailwind product where charts must inherit theme tokens and be
+      styled with CSS — and dataset sizes are moderate.
+    avoid_when: >-
+      Tens of thousands of points — SVG creates a DOM node per element; use
+      Chart.js or ECharts instead.
+    alternatives: [chartjs, echarts, tremor]
+    tags: [charts, svg, react, composable, tailwind, shadcn, theming]
+
+  - name: echarts
+    title: Apache ECharts
+    category: frontend
+    group: charts
+    upstream: https://github.com/apache/echarts
+    ref: master
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://echarts.apache.org/en/index.html
+    install: npm i echarts echarts-for-react
+    license: Apache-2.0
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      Heavy-duty visualisation from the Apache Foundation: geo maps, treemaps,
+      sankey, candlestick, 3D, and WebGL rendering for very large datasets.
+    use_when: The chart type does not exist elsewhere, or the dataset is large enough to need WebGL.
+    avoid_when: A simple line or bar chart — the API and bundle are far larger than the job needs.
+    alternatives: [chartjs, recharts]
+    tags: [charts, webgl, maps, sankey, treemap, big-data, visualisation]
+
+  # ===========================================================================
+  # MOTION, ICONS AND RICH INTERACTION
+  # ===========================================================================
+  - name: motion
+    title: Motion (Framer Motion)
+    category: frontend
+    group: interaction
+    upstream: https://github.com/motiondivision/motion
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://motion.dev/docs/react
+    install: npm i motion
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      The React animation library, formerly Framer Motion: declarative
+      animations, gestures, layout transitions, scroll-linked effects, and a
+      hybrid engine that uses the browser's native animations where possible.
+    use_when: Any animation beyond a CSS transition — page transitions, shared layout, drag gestures.
+    avoid_when: A hover colour change. CSS is free; this is not.
+    alternatives: [magic-ui]
+    tags: [animation, motion, gestures, transitions, framer-motion, react]
+
+  - name: lucide
+    title: Lucide Icons
+    category: frontend
+    group: interaction
+    upstream: https://github.com/lucide-icons/lucide
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://lucide.dev/icons/
+    install: npm i lucide-react
+    license: ISC
+    license_detected: NOASSERTION
+    license_review: >-
+      GitHub reports NOASSERTION because the LICENSE file contains two grants.
+      Read on 2026-09-15: the project is ISC ("Copyright (c) Lucide Icons and
+      Contributors"), with an additional MIT grant (Copyright (c) 2013-present
+      Cole Bemis) covering the ~110 icons derived from Feather. Both are
+      permissive and both permit commercial use and redistribution with
+      attribution, so the set is cleared for use. `lucide-react` declares
+      "license": "ISC" in its package manifest. Attribution is recorded in
+      NOTICE. Re-read this file if the audit reports a change.
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      1500+ consistent open-source icons with a tree-shakeable React package.
+      The icon set shadcn/ui assumes, so using anything else creates visual
+      drift across components.
+    use_when: Default icon set for every product. One import per icon keeps bundles small.
+    avoid_when: You need brand/logo marks (Lucide deliberately excludes them) or a filled-style set.
+    tags: [icons, svg, react, tree-shaking, shadcn]
+
+  - name: dnd-kit
+    title: dnd kit
+    category: frontend
+    group: interaction
+    upstream: https://github.com/clauderic/dnd-kit
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://docs.dndkit.com
+    install: npm i @dnd-kit/core @dnd-kit/sortable
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: established
+    vetted_at: '2026-09-15'
+    description: >-
+      Modern drag-and-drop toolkit for React with keyboard-accessible sensors,
+      sortable lists, and no reliance on the HTML5 drag events.
+    use_when: Kanban boards, sortable lists, dashboard layout builders, file re-ordering.
+    avoid_when: Simple file drop zones — the browser's native drag events are enough.
+    tags: [drag-and-drop, sortable, kanban, accessibility, react]
+
+  - name: tiptap
+    title: Tiptap
+    category: frontend
+    group: interaction
+    upstream: https://github.com/ueberdosis/tiptap
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://tiptap.dev/docs
+    install: npm i @tiptap/react @tiptap/starter-kit
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: established
+    vetted_at: '2026-09-15'
+    description: >-
+      Headless rich-text editor built on ProseMirror: your own UI, an
+      extension system for mentions, tables, collaboration and slash commands.
+    use_when: The product needs a real editor — comments, documents, CMS content, AI chat composers.
+    avoid_when: >-
+      A plain textarea will do. Also check the licence of individual Pro
+      extensions separately; the core is MIT, some official extensions are not.
+    tags: [editor, rich-text, prosemirror, wysiwyg, cms, collaboration]
+
+  - name: cmdk
+    title: cmdk
+    category: frontend
+    group: interaction
+    upstream: https://github.com/dip/cmdk
+    ref: main
+    sync_method: git-submodule
+    coupling: reference
+    path: frontend/interaction/upstream/cmdk
+    internal_dir: null
+    docs: https://cmdk.paco.me
+    install: npm i cmdk
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: auto
+    maturity: established
+    vetted_at: '2026-09-15'
+    maintenance_note: >-
+      Quiet for ~320 days at the vetting date, and effectively feature-complete.
+      Small enough (~1 MB) that reading the source is a realistic fallback,
+      which is why it is ingested rather than merely referenced.
+    description: >-
+      The command-menu primitive behind shadcn/ui's `<Command>` and the
+      ⌘K palettes in Linear, Vercel and Raycast-style UIs. Composable, filtered
+      and keyboard-driven.
+    use_when: Adding a ⌘K palette, a searchable action list, or a combobox with fuzzy filtering.
+    avoid_when: A plain `<select>` would do.
+    alternatives: [radix-primitives]
+    tags: [command-palette, cmdk, search, combobox, keyboard, shadcn]
+
+  - name: sonner
+    title: Sonner
+    category: frontend
+    group: interaction
+    upstream: https://github.com/emilkowalski/sonner
+    ref: main
+    sync_method: git-submodule
+    coupling: reference
+    path: frontend/interaction/upstream/sonner
+    internal_dir: null
+    docs: https://sonner.emilkowal.ski
+    install: npm i sonner
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: auto
+    maturity: established
+    vetted_at: '2026-09-15'
+    description: >-
+      Opinionated toast component — stacking, swipe-to-dismiss, promise-bound
+      toasts. shadcn/ui's recommended toaster.
+    use_when: Any transient success/error feedback. `toast.promise()` covers the common async case.
+    avoid_when: Errors the user must act on — use a dialog or inline form error instead.
+    tags: [toast, notifications, feedback, shadcn, react]
+
+  - name: vaul
+    title: Vaul
+    category: frontend
+    group: interaction
+    upstream: https://github.com/emilkowalski/vaul
+    ref: main
+    sync_method: git-submodule
+    coupling: reference
+    path: frontend/interaction/upstream/vaul
+    internal_dir: null
+    docs: https://vaul.emilkowal.ski
+    install: npm i vaul
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: auto
+    maturity: established
+    vetted_at: '2026-09-15'
+    maintenance_note: Quiet for ~347 days at the vetting date; stable and widely used via shadcn/ui's Drawer.
+    description: >-
+      Drawer component for React with native-feeling snap points and drag
+      dismissal, built on Radix Dialog. Powers shadcn/ui's `<Drawer>`.
+    use_when: Mobile sheets and any bottom-drawer interaction.
+    avoid_when: Desktop-first dialogs — use Radix Dialog directly.
+    alternatives: [radix-primitives]
+    tags: [drawer, sheet, mobile, gestures, shadcn, radix]
+
+  - name: react-resizable-panels
+    title: react-resizable-panels
+    category: frontend
+    group: interaction
+    upstream: https://github.com/bvaughn/react-resizable-panels
+    ref: main
+    sync_method: git-submodule
+    coupling: reference
+    path: frontend/interaction/upstream/react-resizable-panels
+    internal_dir: null
+    docs: https://react-resizable-panels.vercel.app
+    install: npm i react-resizable-panels
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: auto
+    maturity: established
+    vetted_at: '2026-09-15'
+    description: >-
+      Resizable split-pane layouts with persisted sizes and keyboard-accessible
+      handles. The component behind shadcn/ui's `<ResizablePanelGroup>`.
+    use_when: IDE-style layouts, side-by-side previews, adjustable inspector panels.
+    avoid_when: A fixed sidebar — CSS grid is simpler.
+    tags: [layout, panels, split-pane, resizable, ide, shadcn]
+
+  # ===========================================================================
+  # PRODUCTION STARTER TEMPLATES
+  # Cloned, not imported. Start here instead of `create-next-app` when the
+  # product needs auth, billing or a database on day one.
+  # ===========================================================================
+  - name: next-saas-starter
+    title: Next.js SaaS Starter
+    category: frontend
+    group: templates
+    upstream: https://github.com/nextjs/saas-starter
+    ref: main
+    sync_method: git-submodule
+    coupling: reference
+    path: frontend/starters/upstream/saas-starter
+    internal_dir: null
+    docs: https://github.com/nextjs/saas-starter#readme
+    install: npx degit nextjs/saas-starter my-app
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: auto
+    maturity: established
+    vetted_at: '2026-09-15'
+    maintenance_note: ~278 days since the last upstream push at the vetting date; read it as a reference implementation, and update its dependencies after cloning.
+    description: >-
+      The reference SaaS starter from the Next.js team: App Router, Stripe
+      subscriptions and customer portal, JWT session auth, Postgres via Drizzle,
+      role-based teams, activity logging and a dashboard shell.
+    use_when: >-
+      Starting a subscription product. This is the fastest honest answer to
+      "how do I wire Stripe, auth and Postgres into Next.js?".
+    avoid_when: You already have auth and billing, or you are not on Postgres/Drizzle.
+    alternatives: [next-enterprise, next-js-boilerplate, create-t3-app]
+    tags: [saas, stripe, billing, subscriptions, auth, postgres, drizzle, nextjs, dashboard, template]
+    used_for:
+      - Reference implementation of Stripe checkout, webhooks and the customer portal
+      - Team/role data modelling and session handling in the App Router
+
+  - name: next-enterprise
+    title: Next.js Enterprise Boilerplate
+    category: frontend
+    group: templates
+    upstream: https://github.com/Blazity/next-enterprise
+    ref: main
+    sync_method: git-submodule
+    coupling: reference
+    path: frontend/starters/upstream/next-enterprise
+    internal_dir: null
+    docs: https://github.com/Blazity/next-enterprise#readme
+    install: npx degit Blazity/next-enterprise my-app
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: auto
+    maturity: established
+    vetted_at: '2026-09-15'
+    description: >-
+      Opinionated Next.js setup for teams: strict TypeScript, ESLint/Prettier,
+      Jest + Playwright + Storybook, CVA component conventions, bundle
+      analysis, Conventional Commits, Renovate and a complete CI pipeline.
+    use_when: Starting a long-lived application and you want the quality tooling decided on day one.
+    avoid_when: A prototype — the toolchain is deliberately heavy.
+    alternatives: [next-js-boilerplate, next-saas-starter]
+    tags: [nextjs, enterprise, typescript, ci, storybook, playwright, eslint, template]
+    used_for:
+      - House reference for CI, linting and testing configuration in a Next.js app
+
+  - name: next-js-boilerplate
+    title: Next.js Boilerplate (ixartz)
+    category: frontend
+    group: templates
+    upstream: https://github.com/ixartz/Next-js-Boilerplate
+    ref: main
+    sync_method: git-submodule
+    coupling: reference
+    path: frontend/starters/upstream/next-js-boilerplate
+    internal_dir: null
+    docs: https://github.com/ixartz/Next-js-Boilerplate#readme
+    install: npx degit ixartz/Next-js-Boilerplate my-app
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: auto
+    maturity: established
+    vetted_at: '2026-09-15'
+    description: >-
+      Actively maintained Next.js starter with Tailwind, Clerk authentication,
+      Drizzle ORM, i18n, Sentry, Pino logging, Vitest and Playwright already
+      integrated.
+    use_when: >-
+      You want a modern, currently-maintained Next.js base including
+      internationalisation and observability.
+    avoid_when: You do not want Clerk as the auth provider — it is woven through the template.
+    alternatives: [next-enterprise, next-saas-starter]
+    tags: [nextjs, tailwind, clerk, auth, i18n, drizzle, sentry, testing, template]
+
+  - name: vercel-commerce
+    title: Next.js Commerce
+    category: frontend
+    group: templates
+    upstream: https://github.com/vercel/commerce
+    ref: main
+    sync_method: git-submodule
+    coupling: reference
+    path: frontend/starters/upstream/commerce
+    internal_dir: null
+    docs: https://vercel.com/templates/ecommerce/nextjs-commerce
+    install: npx degit vercel/commerce my-store
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: auto
+    maturity: established
+    vetted_at: '2026-09-15'
+    description: >-
+      Vercel's production storefront template: Shopify-backed catalogue, cart
+      and checkout, React Server Components, streaming, optimistic UI and
+      SEO-complete product pages.
+    use_when: Building a storefront, or needing a serious reference for RSC data flow and caching.
+    avoid_when: Your commerce backend is not Shopify — the data layer would need replacing.
+    alternatives: [next-saas-starter]
+    tags: [ecommerce, storefront, shopify, rsc, cart, checkout, seo, template]
+    used_for:
+      - Reference implementation of React Server Components, streaming and cart state
+
+  - name: taxonomy
+    title: Taxonomy (shadcn)
+    category: frontend
+    group: templates
+    upstream: https://github.com/shadcn-ui/taxonomy
+    ref: main
+    sync_method: git-submodule
+    coupling: reference
+    path: frontend/starters/upstream/taxonomy
+    internal_dir: null
+    docs: https://github.com/shadcn-ui/taxonomy#readme
+    install: npx degit shadcn-ui/taxonomy my-app
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: auto
+    maturity: established
+    vetted_at: '2026-09-15'
+    maintenance_note: A demonstration application rather than a maintained product starter; read it, then update dependencies.
+    description: >-
+      shadcn's own full Next.js application: App Router, marketing site,
+      authenticated dashboard, MDX docs and blog, Stripe subscriptions, and
+      the canonical example of shadcn/ui used at application scale.
+    use_when: >-
+      You need to see how the shadcn/ui pieces fit into a real application
+      layout — nav, shell, settings, empty states — rather than in isolation.
+    avoid_when: As a production base; prefer the SaaS starter or the enterprise boilerplate.
+    alternatives: [next-saas-starter, next-enterprise]
+    tags: [nextjs, shadcn, dashboard, mdx, blog, stripe, auth, example, template]
+    used_for:
+      - Application-scale composition of shadcn/ui components and layout shells
+
+  - name: create-t3-app
+    title: create-t3-app
+    category: frontend
+    group: templates
+    upstream: https://github.com/t3-oss/create-t3-app
+    ref: main
+    sync_method: git-submodule
+    coupling: reference
+    path: frontend/starters/upstream/create-t3-app
+    internal_dir: null
+    docs: https://create.t3.gg
+    install: npm create t3-app@latest
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: auto
+    maturity: established
+    vetted_at: '2026-09-15'
+    maintenance_note: ~276 days since the last upstream push at the vetting date; the generated stack itself remains widely used.
+    description: >-
+      Interactive scaffolder for the "T3 stack" — Next.js, TypeScript,
+      Tailwind, tRPC, Prisma/Drizzle and NextAuth — where you pick the pieces
+      and it wires end-to-end type safety between them.
+    use_when: >-
+      A new full-stack TypeScript app where you want typed API calls without
+      writing a schema layer yourself.
+    avoid_when: Your API is a separate service, or the team does not want tRPC.
+    alternatives: [next-saas-starter, next-js-boilerplate]
+    tags: [scaffold, trpc, prisma, nextauth, typescript, fullstack, template]
+
+  - name: refine
+    title: Refine
+    category: frontend
+    group: templates
+    upstream: https://github.com/refinedev/refine
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://refine.dev/docs/
+    install: npm create refine-app@latest
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: established
+    vetted_at: '2026-09-15'
+    description: >-
+      Headless React framework for CRUD-heavy applications: data providers for
+      REST/GraphQL/Supabase/Strapi, auth providers, access control, audit logs
+      and generated admin screens — with the UI layer left to you (works with
+      shadcn/ui, MUI, Ant Design).
+    use_when: >-
+      Internal tools and admin panels where the work is 80% CRUD — this removes
+      most of the wiring rather than most of the styling.
+    avoid_when: A consumer product with bespoke flows; the abstraction stops paying for itself.
+    alternatives: [ant-design, next-saas-starter]
+    tags: [admin, crud, internal-tools, headless, data-provider, rbac, supabase]
+
+  # ===========================================================================
+  # FRAMEWORK, STYLING AND QUALITY TOOLING
+  # ===========================================================================
+  - name: nextjs
+    title: Next.js
+    category: frontend
+    group: platform
+    upstream: https://github.com/vercel/next.js
+    ref: canary           # NOTE: development happens on canary, not main.
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://nextjs.org/docs
+    install: npx create-next-app@latest
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      The React framework this library's starters and components assume:
+      App Router, React Server Components, server actions, streaming, image and
+      font optimisation, middleware.
+    use_when: Default for web products — SSR/SSG, SEO, API routes and deployment are solved together.
+    avoid_when: >-
+      A pure internal SPA with no SEO or server rendering needs — Vite plus
+      TanStack Router is lighter.
+    alternatives: [tanstack-router]
+    tags: [framework, react, ssr, rsc, app-router, seo, vercel]
+
+  - name: tailwindcss
+    title: Tailwind CSS
+    category: frontend
+    group: platform
+    upstream: https://github.com/tailwindlabs/tailwindcss
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://tailwindcss.com/docs
+    install: npm i -D tailwindcss @tailwindcss/postcss
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      The utility-class CSS engine every Tailwind-native system in this catalog
+      is built on, and the styling convention our internal components follow.
+    use_when: Default styling layer for new frontends here.
+    avoid_when: Joining an existing codebase with an established CSS-in-JS or CSS-modules convention.
+    tags: [css, utility-classes, design-tokens, styling, postcss]
+
+  - name: storybook
+    title: Storybook
+    category: frontend
+    group: platform
+    upstream: https://github.com/storybookjs/storybook
+    ref: next             # NOTE: development happens on next, not main.
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://storybook.js.org/docs
+    install: npx storybook@latest init
+    license: MIT
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      Component workshop and living documentation: develop components in
+      isolation, capture states as stories, and run interaction and
+      accessibility tests against them.
+    use_when: >-
+      A shared component library or design system — stories are how the rest of
+      the team discovers what exists.
+    avoid_when: A small app with a handful of components; the maintenance is not repaid.
+    tags: [components, documentation, testing, design-system, isolation, a11y]
+
+  - name: playwright
+    title: Playwright
+    category: frontend
+    group: platform
+    upstream: https://github.com/microsoft/playwright
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://playwright.dev/docs/intro
+    install: npm init playwright@latest
+    license: Apache-2.0
+    license_ok: true
+    enabled: true
+    update_strategy: pull-request
+    maturity: standard
+    vetted_at: '2026-09-15'
+    description: >-
+      End-to-end browser testing across Chromium, Firefox and WebKit, with
+      auto-waiting, tracing, network interception and visual comparison.
+    use_when: Any user journey that must not break — sign-up, checkout, billing.
+    avoid_when: Unit-testing a pure function; Vitest is orders of magnitude faster.
+    tags: [testing, e2e, browser, automation, visual-regression, ci]
+
+  # ===========================================================================
+  # BLOCKED — recorded deliberately so the licence decision is auditable
+  # rather than silently forgotten. No code from these repositories exists in
+  # this library, and scripts/license-audit.mjs proves it on every run.
+  # ===========================================================================
   - name: shadcn-next-template
     title: shadcn-ui/next-template
     category: frontend
+    group: templates
     upstream: https://github.com/shadcn-ui/next-template
     ref: main
     sync_method: reference-only
+    coupling: reference
     path: null
-    internal_dir: frontend/shadcn/templates
+    internal_dir: null
+    docs: https://github.com/shadcn-ui/next-template
     license: NOASSERTION
     license_ok: false
     enabled: false
     update_strategy: pull-request
+    vetted_at: '2026-09-15'
     blocked_reason: >-
       Repository is ARCHIVED and ships NO LICENSE file. Absent an explicit
       licence grant, default copyright applies and redistribution is not
@@ -132,3 +1553,30 @@ sources:
       code. Recorded here only so the decision is visible and re-checkable.
     description: >-
       Archived Next.js starter template from the shadcn-ui org. NOT ingested.
+      Use `taxonomy` or the Next.js SaaS Starter instead.
+
+  - name: vercel-platforms
+    title: vercel/platforms
+    category: frontend
+    group: templates
+    upstream: https://github.com/vercel/platforms
+    ref: main
+    sync_method: reference-only
+    coupling: reference
+    path: null
+    internal_dir: null
+    docs: https://github.com/vercel/platforms
+    license: NONE
+    license_ok: false
+    enabled: false
+    update_strategy: pull-request
+    vetted_at: '2026-09-15'
+    blocked_reason: >-
+      The multi-tenant Next.js starter is a genuinely useful reference, but the
+      repository ships NO LICENSE file (confirmed via the GitHub API on
+      2026-09-15). No licence grant means no permission to copy, so it is not
+      ingested and must not be copied from. Read it on GitHub if you need the
+      subdomain-routing idea, and write the implementation yourself.
+    description: >-
+      Multi-tenant application template (subdomain and custom-domain routing)
+      from Vercel. NOT ingested — no licence.
