@@ -10,3 +10,63 @@
 	path = frontend/shadcn/upstream/ui
 	url = https://github.com/shadcn-ui/ui.git
 	branch = main
+[submodule "frontend/headless/upstream/radix-primitives"]
+	path = frontend/headless/upstream/radix-primitives
+	url = https://github.com/radix-ui/primitives.git
+	branch = main
+[submodule "frontend/headless/upstream/headlessui"]
+	path = frontend/headless/upstream/headlessui
+	url = https://github.com/tailwindlabs/headlessui.git
+	branch = main
+[submodule "frontend/data/upstream/table"]
+	path = frontend/data/upstream/table
+	url = https://github.com/TanStack/table.git
+	branch = main
+[submodule "frontend/data/upstream/react-hook-form"]
+	path = frontend/data/upstream/react-hook-form
+	url = https://github.com/react-hook-form/react-hook-form.git
+	branch = master
+[submodule "frontend/data/upstream/zod"]
+	path = frontend/data/upstream/zod
+	url = https://github.com/colinhacks/zod.git
+	branch = main
+[submodule "frontend/interaction/upstream/cmdk"]
+	path = frontend/interaction/upstream/cmdk
+	url = https://github.com/dip/cmdk.git
+	branch = main
+[submodule "frontend/interaction/upstream/sonner"]
+	path = frontend/interaction/upstream/sonner
+	url = https://github.com/emilkowalski/sonner.git
+	branch = main
+[submodule "frontend/interaction/upstream/vaul"]
+	path = frontend/interaction/upstream/vaul
+	url = https://github.com/emilkowalski/vaul.git
+	branch = main
+[submodule "frontend/interaction/upstream/react-resizable-panels"]
+	path = frontend/interaction/upstream/react-resizable-panels
+	url = https://github.com/bvaughn/react-resizable-panels.git
+	branch = main
+[submodule "frontend/starters/upstream/saas-starter"]
+	path = frontend/starters/upstream/saas-starter
+	url = https://github.com/nextjs/saas-starter.git
+	branch = main
+[submodule "frontend/starters/upstream/next-enterprise"]
+	path = frontend/starters/upstream/next-enterprise
+	url = https://github.com/Blazity/next-enterprise.git
+	branch = main
+[submodule "frontend/starters/upstream/next-js-boilerplate"]
+	path = frontend/starters/upstream/next-js-boilerplate
+	url = https://github.com/ixartz/Next-js-Boilerplate.git
+	branch = main
+[submodule "frontend/starters/upstream/commerce"]
+	path = frontend/starters/upstream/commerce
+	url = https://github.com/vercel/commerce.git
+	branch = main
+[submodule "frontend/starters/upstream/taxonomy"]
+	path = frontend/starters/upstream/taxonomy
+	url = https://github.com/shadcn-ui/taxonomy.git
+	branch = main
+[submodule "frontend/starters/upstream/create-t3-app"]
+	path = frontend/starters/upstream/create-t3-app
+	url = https://github.com/t3-oss/create-t3-app.git
+	branch = main
