@@ -25,7 +25,7 @@ currently points at.
 | Technology | Submodule path (upstream — do not edit) | Pinned commit | Internal code (safe to edit) |
 | --- | --- | --- | --- |
 | shadcn/ui | `frontend/shadcn/upstream/ui` | [`2b3e6d4f8d`](https://github.com/shadcn-ui/ui/commit/2b3e6d4f8d9161fe5c19340dc383aade392012dd) | `frontend/shadcn/templates` |
-| Chart.js | `frontend/chartjs/upstream/Chart.js` | [`913fee4f40`](https://github.com/chartjs/Chart.js/commit/913fee4f40707da6316c6c55c18151ab0436a863) | `frontend/chartjs/examples` |
+| Chart.js | `frontend/chartjs/upstream/Chart.js` | [`6a86e238fa`](https://github.com/chartjs/Chart.js/commit/6a86e238fac3d1ad35eb84b93e7804dfb5813f79) | `frontend/chartjs/examples` |
 | react-chartjs-2 | `frontend/chartjs/upstream/react-chartjs-2` | [`7c7be48ae5`](https://github.com/reactchartjs/react-chartjs-2/commit/7c7be48ae5b585f45bc6aef718cc8d4b51f34d0a) | `frontend/chartjs/examples` |
 
 ### What each source is used for
