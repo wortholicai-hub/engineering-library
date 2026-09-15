@@ -130,13 +130,19 @@ jobs:
       - name: Resolve source paths from the registry
         id: src
         run: |
+          # internal_dir is EMPTY for a reference source — nothing of ours
+          # compiles against it, so there is no package to fingerprint or test.
+          # It must be emitted as an empty string, never the text "null": the
+          # fingerprint step below passes it to `git ls-files`, where an empty
+          # pathspec would silently hash the entire repository.
           node --input-type=module -e "
             import { findSource } from './scripts/registry.mjs';
             import { appendFileSync } from 'node:fs';
             const s = findSource('${{ matrix.source }}');
             appendFileSync(process.env.GITHUB_OUTPUT,
               'path=' + s.path + '\n' +
-              'internal_dir=' + s.internal_dir + '\n' +
+              'internal_dir=' + (s.internal_dir ?? '') + '\n' +
+              'coupling=' + s.coupling + '\n' +
               'title=' + s.title + '\n');
           "
 
@@ -145,6 +151,7 @@ jobs:
 
       - name: Record internal-code fingerprint (pre-sync)
         id: pre
+        if: steps.src.outputs.internal_dir != ''
         run: |
           # Hash our own code BEFORE the sync so we can prove afterwards that
           # the sync did not touch a single byte of it.
@@ -186,7 +193,7 @@ jobs:
         run: node scripts/guard-internal.mjs
 
       - name: 'Validate · internal fingerprint unchanged'
-        if: steps.meta.outputs.changed == 'true'
+        if: steps.meta.outputs.changed == 'true' && steps.src.outputs.internal_dir != ''
         run: |
           HASH=$(git ls-files -s -- "${{ steps.src.outputs.internal_dir }}" | sha256sum | cut -d' ' -f1)
           echo "Internal tree hash after sync:  $HASH"
@@ -211,9 +218,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/license-audit.mjs --remote
 
+      # Only type-coupled sources have a package to break. For a reference
+      # source (a starter template, an accessibility reference) the guard, the
+      # licence re-check and the registry checks above are the entire gate —
+      # there is no code of ours that a bump could invalidate.
       - name: 'Validate · internal packages still build and pass tests'
         id: tests
-        if: steps.meta.outputs.changed == 'true'
+        if: steps.meta.outputs.changed == 'true' && steps.src.outputs.internal_dir != ''
         working-directory: ${{ steps.src.outputs.internal_dir }}
         run: |
           npm ci
@@ -228,10 +239,16 @@ jobs:
             echo '| --- | --- |'
             echo '| Registry schema + `.gitmodules` consistency | ✅ passed |'
             echo '| Guard: only registered submodule pointers changed | ✅ passed |'
-            echo '| Internal code byte-for-byte unchanged | ✅ passed |'
             echo '| Upstream licence re-verified at new commit | ✅ passed |'
-            echo '| Internal package typecheck (`tsc --noEmit`) | ✅ passed |'
-            echo '| Internal package tests | ✅ passed |'
+            if [ -n "${{ steps.src.outputs.internal_dir }}" ]; then
+              echo '| Internal code byte-for-byte unchanged | ✅ passed |'
+              echo '| Internal package typecheck (`tsc --noEmit`) | ✅ passed |'
+              echo '| Internal package tests | ✅ passed |'
+            else
+              # Honest reporting: claiming a test gate that never ran would be
+              # worse than saying there is nothing to test.
+              echo '| Internal package typecheck and tests | ➖ not applicable — `coupling: reference`, no code of ours depends on this source |'
+            fi
             echo '| Generated docs regenerated | ✅ passed |'
           } > .sync-output/validation.md
           # Splice the real results into the PR body.

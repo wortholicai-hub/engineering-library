@@ -80,6 +80,39 @@ updates:
       dev-tooling:
         dependency-type: development
 
+  # --- internal code: table, form and validation helpers --------------------
+  - package-ecosystem: npm
+    directory: /frontend/data/patterns
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+    open-pull-requests-limit: 10
+    labels: [dependencies, internal, frontend]
+    commit-message:
+      prefix: 'chore(deps)'
+    groups:
+      # Zod and the React Hook Form resolver are version-coupled: the resolver
+      # package targets a specific Zod major, so bumping one alone breaks the
+      # typecheck.
+      forms:
+        patterns:
+          - 'react-hook-form'
+          - '@hookform/resolvers'
+          - 'zod'
+      table:
+        patterns:
+          - '@tanstack/*'
+      react:
+        patterns:
+          - 'react'
+          - '@types/react*'
+      dev-tooling:
+        dependency-type: development
+        patterns:
+          - 'typescript'
+          - 'vitest'
+
   # --- our CI ---------------------------------------------------------------
   - package-ecosystem: github-actions
     directory: /

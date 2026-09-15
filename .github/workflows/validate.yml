@@ -63,6 +63,30 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Catalogued (reference-only) sources have no pinned commit to drift.
+      # What rots instead is the recommendation itself — the project gets
+      # archived, relicensed, or renamed — so it is checked separately.
+      - name: Catalog health
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Capture first, then report, so a genuine failure (relicensed or
+          # unreachable) still fails the job instead of being swallowed by the
+          # exit status of the last `echo`.
+          # `|| status=$?` because the default shell runs with `-e`: without
+          # the guard, a failing check would abort the step before the report
+          # is written.
+          status=0
+          node scripts/check-upstream.mjs --catalog > catalog-health.txt || status=$?
+          {
+            echo '## Catalog health'
+            echo ''
+            echo '```'
+            cat catalog-health.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+
   guard:
     name: Sync branches touch upstream pointers only
     if: startsWith(github.head_ref, 'sync/')
@@ -96,6 +120,7 @@ jobs:
         package:
           - frontend/chartjs/examples
           - frontend/shadcn/templates
+          - frontend/data/patterns
     steps:
       - uses: actions/checkout@v7
         with:
