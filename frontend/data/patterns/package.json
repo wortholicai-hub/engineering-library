@@ -1,0 +1,24 @@
+{
+  "name": "@engineering-library/data-patterns",
+  "version": "0.1.0",
+  "private": true,
+  "description": "INTERNAL. House helpers for tables, forms and validation, built against the pinned TanStack Table, React Hook Form and Zod submodules.",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@tanstack/react-table": "^8.21.3",
+    "react-hook-form": "^7.65.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.2",
+    "react": "^19.2.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
+  }
+}
