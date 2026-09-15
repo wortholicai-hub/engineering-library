@@ -94,6 +94,50 @@ upstream code cannot overwrite ours.
 > a fork plus a dependency pin — and the registry has room for that
 > (`sync_method`) without redesigning anything.
 
+### Why not submodule everything
+
+A submodule is the right answer when **reading the source is useful**. It is the
+wrong answer when the source is enormous and nobody will read it: `submodules:
+true` in CI clones every one of them on every run, and the catalog contains
+libraries whose repositories dwarf this one — Ant Design is 281 MB, Next.js
+2.5 GB, daisyUI 12 GB. Ingesting those would cost minutes of CI on every push
+to reference documentation everyone reads on the web instead.
+
+So the registry has a second tier, `sync_method: reference-only`: no code, no
+submodule, but the same registry entry, the same licence verification, and the
+same monitoring. The cutoff is mechanical — `scripts/vet-source.mjs` reports the
+packed size and suggests a tier at `SUBMODULE_SIZE_LIMIT_KB` — and then a human
+asks the real question: *would anyone actually read this source?*
+
+| | `git-submodule` (18) | `reference-only` (28) |
+| --- | --- | --- |
+| Upstream code on disk | Yes, at a pinned commit | No |
+| Chosen for | API truth we type against, small components we wrap, starter applications we copy from | Anything consumed from npm, or too heavy for CI |
+| Drift detection | Daily, pointer moved automatically | Not applicable — no pinned commit |
+| Licence re-verified | Yes, at the pinned commit | Yes, on the tracked branch |
+| Archival / relicensing watch | Yes | Yes — this is the main thing that can rot |
+
+The failure mode of a catalog is not a broken build; it is **quiet
+obsolescence** — a recommendation for something that was archived eight months
+ago. `npm run check:catalog` exists for exactly that, and every entry carries a
+`vetted_at` date so nobody has to guess how old the judgement is.
+
+### Coupling: what a sync can actually break
+
+`sync_method` says whether code is ingested. It says nothing about whether an
+upstream change can break *us* — that is `coupling`, and it is what decides how
+strong the sync gate must be:
+
+| `coupling` | Meaning | Gate on a sync |
+| --- | --- | --- |
+| `type-coupled` | An internal package compiles against its published types | Registry + guard + licence **+ that package's typecheck and tests** |
+| `reference` | Nothing of ours imports it | Registry + guard + licence. There is no code of ours to break, and claiming a test gate that does not exist would be worse than admitting there is none. |
+
+The two axes are independent. A starter template is `git-submodule` +
+`reference`: on disk to read, but nothing imports it. Zod is `git-submodule` +
+`type-coupled`: on disk *and* `frontend/data/patterns` is typed against it, so a
+breaking release fails our typecheck inside the sync rather than in a product.
+
 ---
 
 ## Registry-driven automation
@@ -106,11 +150,13 @@ reading the registry:
 sources.yml
     │
     ├── scripts/registry.mjs        parse + validate; cross-check .gitmodules
+    ├── scripts/vet-source.mjs      vet a CANDIDATE before it is ever added
     ├── scripts/check-upstream.mjs  pinned SHA vs live upstream branch
+    │                               (--catalog: archived/relicensed/released)
     ├── scripts/sync-upstream.mjs   move the pointer, render the PR body
     ├── scripts/guard-internal.mjs  allow-list of paths a sync may touch
     ├── scripts/license-audit.mjs   licence present + SPDX unchanged
-    └── scripts/render-docs.mjs     generate docs/upstream-sources.md
+    └── scripts/render-docs.mjs     generate upstream-sources.md + frontend-catalog.md
 ```
 
 Consequences:
@@ -127,9 +173,15 @@ Consequences:
 | Invariant | Rationale |
 | --- | --- |
 | `update_strategy` ∈ {`auto`, `pull-request`} | Explicit, per-source choice of how updates land. |
-| `update_strategy: auto` requires `license_ok` **and** an `internal_dir` | Unattended updates have no human reviewer, so a source may only run `auto` if it has a test suite to act as the gate. |
+| `update_strategy: auto` on a `type-coupled` source requires `license_ok` **and** an `internal_dir` | Unattended updates have no human reviewer, so a source our code depends on may only run `auto` if it has a test suite to act as the gate. |
+| `update_strategy: auto` is rejected for `reference-only` | There is no pinned commit to move; `auto` would be a lie. |
+| `coupling: type-coupled` requires an `internal_dir` | Otherwise there is nowhere for the code that does the coupling to live. |
 | `enabled: true` requires `license_ok: true` | No ingesting code we have no licence for. |
+| `enabled: true` requires a `docs` URL | A catalog entry nobody can read is dead weight. |
+| `license_detected` requires a written `license_review` | A licence the API cannot classify may only be accepted on the record of a human having read it. |
 | `enabled: false` requires `blocked_reason` | Rejections stay auditable. |
+| `group` must exist in `groups:`, and no group may be empty | The generated catalog is rendered per group; an unknown group would silently hide a source from the documentation developers read. |
+| `alternatives` must name real sources | "Use X instead" is only useful if X exists; a stale name is a dead end. |
 | `path` must sit under an `upstream/` directory | Keeps the read-only boundary unambiguous. |
 | `internal_dir` must **not** sit under `upstream/` | Prevents our code landing in the read-only zone. |
 | Every registry path exists in `.gitmodules`, and vice versa | No unregistered upstream code. |

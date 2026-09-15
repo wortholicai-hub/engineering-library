@@ -8,15 +8,27 @@ attached to its official upstream repository by a **pinned git submodule**, and
 an automated pipeline detects when that upstream moves, validates the change,
 and opens a pull request for a human to review.
 
-> **Current scope:** proof of concept — frontend only (shadcn/ui, Chart.js,
-> react-chartjs-2). The architecture is category-agnostic; `backend/`, `ai/`,
-> `database/`, `integrations/`, `infrastructure/` slot in without redesign.
+> **Current scope:** frontend — **46 vetted sources**: component systems,
+> headless primitives, tables, forms, charts, motion, and six production
+> starter applications. The architecture is category-agnostic; `backend/`,
+> `ai/`, `database/`, `integrations/`, `infrastructure/` slot in without
+> redesign.
+
+### Start here
+
+| You are… | Read |
+| --- | --- |
+| A developer starting a feature or a product | **[`docs/frontend-stack.md`](docs/frontend-stack.md)** — what to use, and what to clone instead of building |
+| Looking for a specific library | **[`docs/frontend-catalog.md`](docs/frontend-catalog.md)** — all 46, with licences, install commands, and when *not* to use each |
+| An AI coding agent | **[`AGENTS.md`](AGENTS.md)** |
+| Reviewing licence compliance | [`docs/upstream-sources.md`](docs/upstream-sources.md) |
 
 ---
 
 ## Table of contents
 
 - [Why this exists](#why-this-exists)
+- [What is in the library](#what-is-in-the-library)
 - [How upstream repositories are connected](#how-upstream-repositories-are-connected)
 - [Repository layout](#repository-layout)
 - [The golden rule: upstream vs internal](#the-golden-rule-upstream-vs-internal)
@@ -45,6 +57,47 @@ This library fixes both halves of that problem:
 | "Nobody knows where this code came from." | Every source has a machine-readable upstream URL, tracked branch and pinned commit. |
 | "Updating upstream wiped our changes." | Upstream and internal code are in separate directories, and the separation is enforced by CI. |
 | "We copied code we had no licence for." | Licences are verified before ingest and re-verified on every sync. |
+| "Everyone picks a different table library." | One catalog with a recommended default per job, and the reasoning written down. |
+
+---
+
+## What is in the library
+
+**46 sources, every one vetted against the GitHub API** — licence, maintenance
+status and repository weight — before it was added, and re-checked
+automatically afterwards.
+
+| Group | Contents |
+| --- | --- |
+| **Component systems** | MUI · Ant Design · Mantine · Chakra UI · PrimeReact · HeroUI |
+| **Tailwind-native** | shadcn/ui · daisyUI · Flowbite React · Magic UI · Tremor |
+| **Headless / accessibility** | Radix Primitives · Headless UI · React Aria · Base UI · Ark UI |
+| **Data, forms, state** | TanStack Table · Query · Router · Virtual · React Hook Form · Zod · Zustand |
+| **Charts** | Chart.js · react-chartjs-2 · Recharts · ECharts |
+| **Motion, icons, interaction** | Motion · Lucide · dnd kit · Tiptap · cmdk · Sonner · Vaul · resizable panels |
+| **Starter applications** | Next.js SaaS Starter · next-enterprise · Next.js Boilerplate · Next.js Commerce · Taxonomy · create-t3-app · Refine |
+| **Platform** | Next.js · Tailwind CSS · Storybook · Playwright |
+
+Sources are ingested at one of two tiers, and the registry records which and
+why:
+
+| Tier | Count | What it means |
+| --- | --- | --- |
+| **`git-submodule`** | 18 | The upstream code is on disk at a pinned commit — read it, copy from it, never edit it. Chosen where reading the source is genuinely useful and the repository is small enough for CI. |
+| **`reference-only`** | 28 | No code ingested. Catalogued with docs, install command and house guidance; monitored for archival, relicensing and releases. Chosen for anything installed from npm, or too heavy to clone (Ant Design alone is 281 MB). |
+
+Two repositories were **evaluated and rejected** on licence grounds. They stay
+in the registry so the decision is auditable — see
+[Licensing](#licensing).
+
+**Our own reusable code** lives beside them, tested and typed against the
+pinned upstream:
+
+| Package | What you get |
+| --- | --- |
+| [`frontend/data/patterns`](frontend/data/patterns) | Table state and query mapping, Zod + React Hook Form wiring, field schemas, cell formatters |
+| [`frontend/chartjs/examples`](frontend/chartjs/examples) | Dashboard chart presets, palette, Chart.js registration |
+| [`frontend/shadcn/templates`](frontend/shadcn/templates) | `cn()`, button and status-badge variants |
 
 ---
 
@@ -95,23 +148,34 @@ engineering-library/
 │   │   ├── upstream/ui/         ← SUBMODULE → github.com/shadcn-ui/ui      (read-only)
 │   │   └── templates/           ← OUR CODE  (safe to edit, tested, Dependabot-managed)
 │   │
-│   └── chartjs/
-│       ├── upstream/Chart.js/          ← SUBMODULE → github.com/chartjs/Chart.js        (read-only)
-│       ├── upstream/react-chartjs-2/   ← SUBMODULE → github.com/reactchartjs/react-chartjs-2 (read-only)
-│       └── examples/                   ← OUR CODE  (safe to edit, tested, Dependabot-managed)
+│   ├── chartjs/
+│   │   ├── upstream/Chart.js/          ← SUBMODULE (read-only)
+│   │   ├── upstream/react-chartjs-2/   ← SUBMODULE (read-only)
+│   │   └── examples/                   ← OUR CODE (chart presets)
+│   │
+│   ├── data/
+│   │   ├── upstream/{table,react-hook-form,zod}/  ← SUBMODULES (read-only)
+│   │   └── patterns/                   ← OUR CODE (table, form and schema helpers)
+│   │
+│   ├── headless/upstream/       ← SUBMODULES: Radix Primitives, Headless UI  (read-only)
+│   ├── interaction/upstream/    ← SUBMODULES: cmdk, Sonner, Vaul, panels     (read-only)
+│   └── starters/upstream/       ← SUBMODULES: six production applications    (read-only)
 │
 ├── .github/
 │   ├── dependabot.yml
 │   └── workflows/
-│       ├── upstream-sync.yml    ← detect → sync → validate → PR
+│       ├── upstream-sync.yml    ← detect → sync → validate → commit or PR
 │       └── validate.yml         ← registry, docs, licences, internal tests
 │
 ├── docs/
-│   ├── upstream-sources.md      ← GENERATED from sources.yml
+│   ├── frontend-stack.md        ← what to use for what (hand-written, opinionated)
+│   ├── frontend-catalog.md      ← GENERATED from sources.yml — the full catalog
+│   ├── upstream-sources.md      ← GENERATED from sources.yml — the compliance view
 │   ├── architecture.md          ← design decisions and trade-offs
 │   └── adding-a-source.md       ← how to extend the library
 │
 └── scripts/                     ← registry-driven automation (no hardcoded tech names)
+    └── vet-source.mjs           ← vet a candidate before it is ever added
 ```
 
 Adding a category is just adding a top-level directory and registry entries —
@@ -126,7 +190,7 @@ Adding a category is just adding a top-level directory and registry entries —
 
 | | Upstream | Internal |
 | --- | --- | --- |
-| Where | any path under an `upstream/` directory | `templates/`, `examples/` (declared as `internal_dir` in the registry) |
+| Where | any path under an `upstream/` directory | `patterns/`, `templates/`, `examples/` (declared as `internal_dir` in the registry) |
 | What | official third-party code, unmodified | our wrappers, presets, house patterns |
 | Who changes it | upstream maintainers only | us |
 | How it updates | automated sync PR, moving a commit pointer | normal pull requests |
@@ -155,34 +219,40 @@ Two independent tracks keep the library current. Neither needs a human.
 ```mermaid
 flowchart LR
     subgraph PUBLIC["🌍 Public upstream repositories"]
-        U1["shadcn-ui/ui"]
-        U2["chartjs/Chart.js"]
-        U3["reactchartjs/react-chartjs-2"]
-        NPM["npm registry<br/>react · typescript · vitest · tailwind-merge"]
+        U1["18 ingested repositories<br/><i>shadcn/ui · Radix · TanStack Table ·<br/>Zod · RHF · 6 starters · …</i>"]
+        U2["28 catalogued repositories<br/><i>MUI · Ant Design · Mantine ·<br/>TanStack Query · Motion · …</i>"]
+        NPM["npm registry<br/>react · typescript · vitest · zod · …"]
     end
 
     subgraph AUTOMATION["⚙️ Automation in this repo"]
-        SYNC["<b>upstream-sync.yml</b><br/>daily 06:00 UTC<br/><i>tracks repositories</i>"]
+        SYNC["<b>upstream-sync.yml</b><br/>daily 06:00 UTC<br/><i>moves pinned commits</i>"]
+        WATCH["<b>licence audit + catalog check</b><br/>every run<br/><i>archived? relicensed?</i>"]
         DEPS["<b>Dependabot</b> + <b>auto-merge.yml</b><br/>weekly<br/><i>tracks packages</i>"]
     end
 
     subgraph LIB["📚 Engineering Library · main"]
-        UP["<b>upstream/</b><br/>pinned submodules<br/>read-only"]
-        INT["<b>templates/ · examples/</b><br/>our code<br/>editable"]
+        UP["<b>upstream/</b><br/>18 pinned submodules<br/>read-only"]
+        CAT["<b>docs/frontend-catalog.md</b><br/>28 monitored libraries<br/>generated"]
+        INT["<b>patterns/ · templates/ · examples/</b><br/>our code<br/>editable"]
     end
 
     DEV["Developers<br/>and AI agents"]
 
-    U1 & U2 & U3 --> SYNC
+    U1 --> SYNC
+    U2 --> WATCH
     NPM --> DEPS
     SYNC -->|"moves the commit pointer"| UP
+    WATCH -->|"keeps the catalog honest"| CAT
     DEPS -->|"bumps package versions"| INT
-    UP -.->|"API reference"| DEV
+    UP -.->|"API truth · code to copy"| DEV
+    CAT -.->|"what to install"| DEV
     INT ==>|"reuse this"| DEV
 
     style UP fill:#fff3cd,stroke:#d39e00,color:#000
+    style CAT fill:#fff3cd,stroke:#d39e00,color:#000
     style INT fill:#d4edda,stroke:#28a745,color:#000
     style SYNC fill:#cce5ff,stroke:#0066cc,color:#000
+    style WATCH fill:#cce5ff,stroke:#0066cc,color:#000
     style DEPS fill:#cce5ff,stroke:#0066cc,color:#000
 ```
 
@@ -260,10 +330,12 @@ a sibling directory; the guard script rejects any changed path that isn't a
 registered submodule pointer; and the workflow hashes our code before and after
 the bump and aborts on any difference.
 
-**This library updates itself.** All three frontend sources run
+**This library updates itself.** All 18 ingested sources run
 `update_strategy: auto`, so a validated upstream change lands on `main` with no
 manual step. Dependency PRs from Dependabot are merged by `auto-merge.yml` once
-their checks pass.
+their checks pass. The 28 catalogued (`reference-only`) sources have no pinned
+commit to move — they are watched instead, and a relicensing or an archived
+repository fails the licence audit.
 
 > **What this means:** with `auto`, **the test suite is the only gate** between
 > an upstream change and `main`. The registry enforces that a source may only
@@ -283,9 +355,11 @@ their checks pass.
 ### Running it yourself
 
 ```bash
-npm run check:upstream                      # report drift, change nothing
+npm run check:upstream                      # drift of the 18 ingested sources
+npm run check:catalog                       # health of the 28 catalogued ones
 npm run sync:upstream -- --source chartjs --dry-run
 npm run validate                            # registry + docs + licences
+npm run vet -- owner/repo                   # vet a candidate before adding it
 ```
 
 ---
@@ -296,7 +370,7 @@ Two separate concerns, deliberately handled by two different mechanisms:
 
 | What | Managed by | Cadence |
 | --- | --- | --- |
-| **Our internal packages'** dependencies (`chart.js`, `react-chartjs-2`, `react`, `typescript`, `vitest`, `clsx`, `tailwind-merge`, …) | **Dependabot** opens grouped PRs — [`.github/dependabot.yml`](.github/dependabot.yml) — and [`auto-merge.yml`](.github/workflows/auto-merge.yml) merges them once checks pass | weekly |
+| **Our internal packages'** dependencies (`chart.js`, `react-chartjs-2`, `zod`, `react-hook-form`, `@tanstack/react-table`, `react`, `typescript`, `vitest`, `clsx`, `tailwind-merge`, …) | **Dependabot** opens grouped PRs — [`.github/dependabot.yml`](.github/dependabot.yml) — and [`auto-merge.yml`](.github/workflows/auto-merge.yml) merges them once checks pass | weekly |
 | **Our GitHub Actions** versions | Dependabot (`github-actions` ecosystem), same auto-merge path | weekly |
 | **Upstream submodule pointers** | `upstream-sync.yml` (licence re-verification + guard + validation gate), committed straight to `main` | daily |
 | **Dependencies *inside* upstream submodules** | Not ours to manage — upstream owns them. Changes are *reported* in every sync PR ("Did dependencies change?"). | reported |
@@ -354,24 +428,28 @@ human-authored PR**.
 ## For developers
 
 ```bash
-# Clone WITH upstream sources (recommended)
+# Clone WITH upstream sources (~350 MB — 18 pinned repositories)
 git clone --recurse-submodules https://github.com/wortholicai-hub/engineering-library.git
 
 # Already cloned without them?
 git submodule update --init --recursive
 
-# Only need one upstream source? Fetch just that one.
-git submodule update --init -- frontend/chartjs/upstream/Chart.js
+# Only need one upstream source? Fetch just that one — this is the common case.
+git submodule update --init -- frontend/starters/upstream/saas-starter
+
+# Cheaper still: shallow, current tip only
+git submodule update --init --depth 1 -- frontend/data/upstream/zod
 ```
 
 Working on internal code:
 
 ```bash
-cd frontend/chartjs/examples
+cd frontend/data/patterns          # or chartjs/examples, or shadcn/templates
 npm install && npm test
 ```
 
-**Workflow:** look in the internal directory for an existing pattern → if it
+**Workflow:** read [`docs/frontend-stack.md`](docs/frontend-stack.md) to decide
+*what* to use → look in the internal directory for an existing pattern → if it
 fits, use it → if it nearly fits, extend it *there* → only then write something
 new. Read the upstream submodule to understand the underlying API; never edit it.
 
@@ -385,12 +463,15 @@ rules in machine-checkable terms.
 The short version:
 
 1. Read [`sources.yml`](sources.yml) to learn what exists, what each source is
-   for, and where its code lives.
-2. Reuse from the **internal** directories (`templates/`, `examples/`). That is
-   vetted, tested, house-style code.
-3. Read the **upstream** directories for API truth. **Never edit them** — an
-   edit there cannot even be committed.
-4. Do not add a dependency that duplicates a registered source.
+   for (`use_when` / `avoid_when` / `tags`), and where its code lives.
+2. Reuse from the **internal** directories (`patterns/`, `templates/`,
+   `examples/`). That is vetted, tested, house-style code.
+3. Read the **upstream** directories for API truth, and
+   `frontend/starters/upstream/` for whole working implementations of billing,
+   auth and dashboards. **Never edit them** — an edit there cannot even be
+   committed.
+4. Do not add a dependency that duplicates a registered source, and never copy
+   from a repository the registry marks `enabled: false`.
 
 ---
 
@@ -399,10 +480,16 @@ The short version:
 Full walkthrough: **[`docs/adding-a-source.md`](docs/adding-a-source.md)**.
 
 ```bash
-# 1. verify the licence permits our use, then:
-git submodule add -b <branch> <upstream-url> <category>/<tech>/upstream/<name>
-# 2. add the entry to sources.yml
-# 3. regenerate docs and validate
+# 1. vet it — licence, maintenance and weight, from the GitHub API
+npm run vet -- owner/repo
+
+# 2a. INGEST the code (reading it is useful, and the repo is CI-sized):
+git submodule add --depth 1 -b <branch> <upstream-url> <category>/<tech>/upstream/<name>
+# 2b. …or CATALOG it only (installed from npm, or too heavy to clone):
+#     no submodule — set sync_method: reference-only and path: null
+
+# 3. add the entry to sources.yml
+# 4. regenerate docs and validate
 npm run docs:render && npm run validate
 ```
 
@@ -424,8 +511,9 @@ registry.
 
 ## Licensing
 
-All three ingested sources are **MIT** licensed, which permits use,
-modification and redistribution with attribution.
+Every source in the library is under a **permissive** licence — MIT, Apache-2.0
+or ISC — all of which permit commercial use, modification and redistribution
+with attribution.
 
 - Licence texts are preserved verbatim — they live inside each submodule at
   their original path.
@@ -433,13 +521,29 @@ modification and redistribution with attribution.
 - Per-source detail: [`docs/upstream-sources.md`](docs/upstream-sources.md).
 - Our own code in this repository is MIT — see [`LICENSE`](LICENSE).
 
-Licence compliance is **checked, not assumed**:
-`scripts/license-audit.mjs` fails CI if an enabled source is missing its licence
-file, or if the SPDX identifier GitHub reports for the upstream repository stops
-matching what the registry records.
+Licence compliance is **checked, not assumed**. Three mechanisms, in order:
 
-One repository was evaluated and **rejected** on licence grounds —
-[`shadcn-ui/next-template`](https://github.com/shadcn-ui/next-template) is
-archived and ships no LICENSE file, so no licence is granted and none of its
-code is present here. It stays listed in the registry as `enabled: false` so the
-decision is auditable rather than forgotten.
+1. **Before adding** — `npm run vet -- owner/repo` reads the licence,
+   maintenance status and size from the GitHub API. No licence file means the
+   candidate is rejected, however useful it looks.
+2. **Continuously** — `scripts/license-audit.mjs --remote` fails CI if an
+   enabled source is missing its licence file, or if the SPDX identifier GitHub
+   reports stops matching the registry. This covers catalogued sources too,
+   where nothing on disk would change if upstream relicensed.
+3. **When GitHub cannot classify a licence** — the registry records both what
+   the API reports (`license_detected`) and the human reading that justifies
+   the decision (`license_review`), so the check still detects change instead
+   of being switched off. Lucide is the worked example: ISC, plus an MIT grant
+   inherited from Feather for ~110 icons.
+
+**Two repositories were evaluated and rejected** on licence grounds, and stay
+in the registry as `enabled: false` so the decisions are auditable rather than
+forgotten:
+
+| Repository | Why |
+| --- | --- |
+| [`shadcn-ui/next-template`](https://github.com/shadcn-ui/next-template) | Archived, no LICENSE file |
+| [`vercel/platforms`](https://github.com/vercel/platforms) | No LICENSE file — a well-known multi-tenant starter that we still may not copy from |
+
+No code from either is present here, and `scripts/license-audit.mjs` proves it
+on every run.

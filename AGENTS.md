@@ -11,18 +11,35 @@ building this from scratch"*, this file tells you how.
 ## 1. Orient yourself in one file
 
 [`sources.yml`](sources.yml) is the machine-readable registry and the source of
-truth. Parse it first. Each entry tells you:
+truth — **46 vetted frontend sources**. Parse it first. Each entry tells you:
 
 | Field | What it tells you |
 | --- | --- |
 | `title`, `description` | what the technology is |
+| `group` | which catalog section it belongs to |
+| `use_when` / `avoid_when` | **whether to pick it for the task in front of you** |
+| `alternatives` | what to use instead when it is the wrong fit |
+| `tags` | keywords to match a request against (`table`, `auth`, `animation`, …) |
+| `install` | the exact command that adds it to a product |
+| `docs` | official documentation URL |
 | `used_for` | what we use it for |
-| `path` | where the **upstream** code is — read-only |
+| `path` | where the **upstream** code is — read-only (`null` = not ingested) |
 | `internal_dir` | where **our** code is — reusable and editable |
-| `upstream` | the official repository it came from |
-| `ref` | the upstream branch we track |
+| `sync_method` | `git-submodule` = source is on disk · `reference-only` = install from npm |
+| `coupling` | `type-coupled` = our code compiles against it |
+| `upstream`, `ref` | the official repository and the branch we track |
 | `license`, `license_ok` | whether we are allowed to use it |
 | `enabled` | `false` means **do not use this source at all** |
+| `maintenance_note` | a known maintenance risk you should surface to the user |
+
+Human-readable views of the same data, regenerated from it:
+[`docs/frontend-catalog.md`](docs/frontend-catalog.md) (everything available)
+and [`docs/frontend-stack.md`](docs/frontend-stack.md) (what to pick, and the
+house default stack).
+
+**Before you add any npm dependency, check the registry.** If it is already
+catalogued, use the catalogued one — it is licence-cleared and monitored. If it
+is not catalogued, say so and prefer an alternative that is.
 
 ---
 
@@ -85,7 +102,14 @@ Work through this in order. Stop at the first step that satisfies the request.
 
 **Do not** add a new npm dependency that duplicates a registered source. If the
 request involves charts, use `chart.js` / `react-chartjs-2` — they are already
-here, already licence-cleared, and already dependency-managed.
+here, already licence-cleared, and already dependency-managed. The same applies
+to tables (TanStack Table), forms (React Hook Form + Zod), toasts (Sonner),
+command palettes (cmdk), drawers (Vaul), icons (Lucide) and animation (Motion).
+
+**Do not copy code from a repository that is not in the registry**, and never
+from one recorded as `enabled: false` — those are blocked because they carry no
+licence grant, which makes copying them a legal problem rather than a style
+preference.
 
 ---
 
@@ -121,6 +145,39 @@ If a preset does not exist for the chart you need, add it to
 `frontend/chartjs/examples/src/dashboard-presets.ts` with a test — so the next
 agent finds it at step 1.
 
+> **Request:** *"Add a customers table with search and pagination, and a form
+> to invite a teammate."*
+
+```ts
+import { useReactTable } from '@tanstack/react-table';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import {
+  clientTable, columnsFor, pageInfo, formatDate,   // table
+  zodForm, email, applyServerErrors,               // form
+} from '@engineering-library/data-patterns';       // frontend/data/patterns
+
+const col = columnsFor<Customer>();
+const table = useReactTable(clientTable({ data: customers, columns: [
+  col.accessor('name',      { header: 'Name' }),
+  col.accessor('createdAt', { header: 'Joined', cell: (c) => formatDate(c.getValue()) }),
+]}));
+const { from, to, total } = pageInfo(table.getState().pagination, customers.length);
+
+const inviteSchema = z.object({ email, role: z.enum(['admin', 'member']) });
+const form = useForm(zodForm(inviteSchema, { email: '', role: 'member' }));
+```
+
+What you did **not** do: choose a page size, write a `sorting → ?sort=` mapper,
+write an email regex, invent a password rule, or wire a Zod resolver by hand.
+Render it with the shadcn/ui data-table and form blocks.
+
+> **Request:** *"Add Stripe subscriptions."*
+
+Read `frontend/starters/upstream/saas-starter/` first — checkout, webhook
+handling and the customer portal are implemented there, MIT-licensed, at a
+pinned commit. Adapt that, do not invent it.
+
 ---
 
 ## 5. Where things are
@@ -129,11 +186,23 @@ agent finds it at step 1.
 | --- | --- | --- |
 | Chart presets, palette, Chart.js registration | `frontend/chartjs/examples/src/` | ✅ yes |
 | `cn()`, button/badge variants | `frontend/shadcn/templates/src/` | ✅ yes |
+| Table state, form + Zod helpers, formatters | `frontend/data/patterns/src/` | ✅ yes |
 | Chart.js API truth (options, scales, plugins) | `frontend/chartjs/upstream/Chart.js/` | ❌ **no** |
 | React chart component props | `frontend/chartjs/upstream/react-chartjs-2/` | ❌ **no** |
 | shadcn component anatomy and conventions | `frontend/shadcn/upstream/ui/` | ❌ **no** |
+| TanStack Table / React Hook Form / Zod API truth | `frontend/data/upstream/` | ❌ **no** |
+| Accessibility + keyboard behaviour (Radix, Headless UI) | `frontend/headless/upstream/` | ❌ **no** |
+| cmdk, Sonner, Vaul, resizable panels source | `frontend/interaction/upstream/` | ❌ **no** |
+| **Whole applications to copy patterns from** (Stripe billing, auth, teams, RSC cart, dashboard shells) | `frontend/starters/upstream/` | ❌ **no** |
+| Which library to use for a task | `docs/frontend-stack.md`, `docs/frontend-catalog.md` | ⚠️ catalog is generated |
 | Sync automation | `scripts/`, `.github/workflows/` | ⚠️ only on request |
 | Registry | `sources.yml` | ⚠️ see below |
+
+**The starters are the biggest shortcut in this repository.** When a user asks
+for something a production application already solves — Stripe subscriptions
+and webhooks, session auth, team/role models, a storefront cart, a dashboard
+shell — read the implementation in `frontend/starters/upstream/` before writing
+one. It is real, working, MIT-licensed code pinned to an exact commit.
 
 If an upstream directory looks empty, submodules are not checked out. Run:
 
@@ -147,11 +216,19 @@ git submodule update --init --recursive
 
 Only do this when explicitly asked. Then you must:
 
-1. Verify the licence permits our use. **No LICENSE file means no permission** —
-   set `enabled: false` and record `blocked_reason`. Do not ingest it.
-2. `git submodule add -b <branch> <url> <category>/<tech>/upstream/<name>`
-3. Add the `sources.yml` entry (all required fields).
-4. Run `npm run docs:render` — never hand-edit `docs/upstream-sources.md`.
+1. `npm run vet -- owner/repo` — verify the licence, maintenance status and
+   repository weight **against the GitHub API, not from memory**.
+   **No LICENSE file means no permission** — set `enabled: false` and record
+   `blocked_reason`. Do not ingest it.
+2. Decide the tier the vetting output suggests:
+   - `git-submodule` — reading the source is useful and the repo is small
+     enough to clone in CI. Then:
+     `git submodule add --depth 1 -b <branch> <url> <category>/<tech>/upstream/<name>`
+   - `reference-only` — consumed from npm, or too heavy. No submodule; set
+     `path: null`.
+3. Add the `sources.yml` entry (all required fields, including `group`,
+   `coupling`, `docs`, `use_when` and `avoid_when`).
+4. Run `npm run docs:render` — never hand-edit the generated docs.
 5. Run `npm run validate` and confirm it passes.
 
 Full detail: [`docs/adding-a-source.md`](docs/adding-a-source.md).
@@ -162,9 +239,12 @@ Full detail: [`docs/adding-a-source.md`](docs/adding-a-source.md).
 
 ```bash
 npm run validate          # registry + generated docs + licences
-npm run check:upstream    # how far behind upstream each source is
+npm run check:upstream    # how far behind upstream each ingested source is
+npm run check:catalog     # are the catalogued (npm-installed) sources still healthy?
+npm run vet -- owner/repo # vet a candidate before proposing it
 cd frontend/chartjs/examples   && npm test
 cd frontend/shadcn/templates   && npm test
+cd frontend/data/patterns      && npm test
 ```
 
 Never "fix" a failing upstream sync by editing files inside `upstream/`.

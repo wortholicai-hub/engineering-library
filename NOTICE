@@ -1,70 +1,175 @@
 Engineering Library — Third-Party Notices
 =========================================
 
-This repository tracks third-party open-source projects as PINNED GIT
-SUBMODULES. Their source code is NOT copied or redistributed here; this
-repository records only the upstream URL and a specific commit identifier.
+This repository tracks third-party open-source projects in two ways, and
+neither copies or redistributes their source code:
 
-Each upstream project retains its own copyright and licence. The full,
-unmodified licence text of each project is present at its original path inside
-the corresponding submodule.
+  INGESTED (18)    — tracked as PINNED GIT SUBMODULES. This repository records
+                     only the upstream URL and a specific commit identifier.
+                     The full, unmodified licence text of each project is
+                     present at its original path inside the submodule.
+
+  CATALOGUED (28)  — recorded in the registry with their licence, docs and our
+                     house guidance, and monitored for archival and
+                     relicensing. NO code and NO files from them exist in this
+                     repository; they are installed from npm by the products
+                     that use them, which is where their attribution
+                     obligations arise.
+
+Each upstream project retains its own copyright and licence.
 
 Machine-readable registry: /sources.yml
-Generated summary:         /docs/upstream-sources.md
+Generated summaries:       /docs/upstream-sources.md  ·  /docs/frontend-catalog.md
 
 
--------------------------------------------------------------------------------
-1. shadcn/ui
--------------------------------------------------------------------------------
-Upstream:  https://github.com/shadcn-ui/ui
-Licence:   MIT
-Text:      frontend/shadcn/upstream/ui/LICENSE.md
-Path:      frontend/shadcn/upstream/ui  (git submodule)
+===============================================================================
+INGESTED PROJECTS (pinned git submodules)
+===============================================================================
 
-Copyright (c) shadcn and contributors.
+ 1. shadcn/ui                     MIT
+    https://github.com/shadcn-ui/ui
+    frontend/shadcn/upstream/ui/LICENSE.md
+    Copyright (c) 2023 shadcn
+
+ 2. Chart.js                      MIT
+    https://github.com/chartjs/Chart.js
+    frontend/chartjs/upstream/Chart.js/LICENSE.md
+    Copyright (c) 2014-2024 Chart.js Contributors
+
+ 3. react-chartjs-2               MIT
+    https://github.com/reactchartjs/react-chartjs-2
+    frontend/chartjs/upstream/react-chartjs-2/LICENSE.md
+    Copyright (c) 2017 Jeremy Ayerst
+
+ 4. Radix Primitives              MIT
+    https://github.com/radix-ui/primitives
+    frontend/headless/upstream/radix-primitives/LICENSE
+    Copyright (c) 2022 WorkOS
+
+ 5. Headless UI                   MIT
+    https://github.com/tailwindlabs/headlessui
+    frontend/headless/upstream/headlessui/LICENSE
+    Copyright (c) 2020 Tailwind Labs
+
+ 6. TanStack Table                MIT
+    https://github.com/TanStack/table
+    frontend/data/upstream/table/LICENSE
+    Copyright (c) 2016 Tanner Linsley
+
+ 7. React Hook Form               MIT
+    https://github.com/react-hook-form/react-hook-form
+    frontend/data/upstream/react-hook-form/LICENSE
+    Copyright (c) 2019-present Beier(Bill) Luo
+
+ 8. Zod                           MIT
+    https://github.com/colinhacks/zod
+    frontend/data/upstream/zod/LICENSE
+    Copyright (c) 2025 Colin McDonnell
+
+ 9. cmdk                          MIT
+    https://github.com/dip/cmdk
+    frontend/interaction/upstream/cmdk/LICENSE.md
+    Copyright (c) 2022 Paco Coursey
+
+10. Sonner                        MIT
+    https://github.com/emilkowalski/sonner
+    frontend/interaction/upstream/sonner/LICENSE.md
+    Copyright (c) 2023 Emil Kowalski
+
+11. Vaul                          MIT
+    https://github.com/emilkowalski/vaul
+    frontend/interaction/upstream/vaul/LICENSE.md
+    Copyright (c) 2023 Emil Kowalski
+
+12. react-resizable-panels        MIT
+    https://github.com/bvaughn/react-resizable-panels
+    frontend/interaction/upstream/react-resizable-panels/LICENSE.md
+    Copyright (c) 2018 Brian Vaughn
+
+13. Next.js SaaS Starter          MIT
+    https://github.com/nextjs/saas-starter
+    frontend/starters/upstream/saas-starter/LICENSE
+    Copyright (c) 2025 Vercel
+
+14. Next.js Enterprise Boilerplate  MIT
+    https://github.com/Blazity/next-enterprise
+    frontend/starters/upstream/next-enterprise/LICENSE
+    Copyright (c) 2023 Blazity
+
+15. Next.js Boilerplate           MIT
+    https://github.com/ixartz/Next-js-Boilerplate
+    frontend/starters/upstream/next-js-boilerplate/LICENSE
+    Copyright (c) 2026 Remi W.
+
+16. Next.js Commerce              MIT
+    https://github.com/vercel/commerce
+    frontend/starters/upstream/commerce/license.md
+    Copyright (c) 2025 Vercel, Inc.
+
+17. Taxonomy                      MIT
+    https://github.com/shadcn-ui/taxonomy
+    frontend/starters/upstream/taxonomy/LICENSE.md
+    Copyright (c) 2022 shadcn
+
+18. create-t3-app                 MIT
+    https://github.com/t3-oss/create-t3-app
+    frontend/starters/upstream/create-t3-app/LICENSE
+    Copyright (c) 2022 Shoubhit Dash
+
+Each copyright line above is quoted verbatim from the licence file named
+directly beneath its project. That file, inside the submodule and exactly as
+upstream publishes it, is the authoritative text.
 
 
--------------------------------------------------------------------------------
-2. Chart.js
--------------------------------------------------------------------------------
-Upstream:  https://github.com/chartjs/Chart.js
-Licence:   MIT
-Text:      frontend/chartjs/upstream/Chart.js/LICENSE.md
-Path:      frontend/chartjs/upstream/Chart.js  (git submodule)
+===============================================================================
+CATALOGUED, NOT INGESTED
+===============================================================================
+No code from these projects is present in this repository. They are recorded in
+/sources.yml with a verified licence and monitored for relicensing. The full
+list, with licences and links, is in /docs/frontend-catalog.md.
 
-Copyright (c) Chart.js Contributors.
+MIT:         MUI (Material UI) · Ant Design · Mantine · Chakra UI · PrimeReact ·
+             daisyUI · Flowbite React · Magic UI · Base UI · Ark UI ·
+             TanStack Query · TanStack Router · TanStack Virtual · Zustand ·
+             Recharts · Motion · dnd kit · Tiptap · Refine · Next.js ·
+             Tailwind CSS · Storybook
+Apache-2.0:  HeroUI · React Aria (Adobe React Spectrum) · Apache ECharts ·
+             Tremor · Playwright
+ISC:         Lucide Icons
+
+Lucide is recorded with a written licence review because GitHub reports its
+SPDX identifier as NOASSERTION. Its LICENSE file contains two grants: the
+project is ISC ("Copyright (c) Lucide Icons and Contributors"), with an
+additional MIT grant (Copyright (c) 2013-present Cole Bemis) covering the icons
+derived from the Feather project. Both are permissive. The review is recorded
+in /sources.yml under `license_review`, and the licence audit compares against
+the detected value so any change is still caught.
 
 
--------------------------------------------------------------------------------
-3. react-chartjs-2
--------------------------------------------------------------------------------
-Upstream:  https://github.com/reactchartjs/react-chartjs-2
-Licence:   MIT
-Text:      frontend/chartjs/upstream/react-chartjs-2/LICENSE.md
-Path:      frontend/chartjs/upstream/react-chartjs-2  (git submodule)
-
-Copyright (c) Jeremy Ayerst and contributors.
-
-
--------------------------------------------------------------------------------
+===============================================================================
 EVALUATED AND EXCLUDED
--------------------------------------------------------------------------------
+===============================================================================
 shadcn-ui/next-template  —  https://github.com/shadcn-ui/next-template
+    ARCHIVED and contains NO LICENSE file.
 
-This repository is ARCHIVED and contains NO LICENSE file. Absent an explicit
-grant, default copyright applies and redistribution is not permitted. No code
-from it appears anywhere in this repository. It remains recorded in
-/sources.yml with `enabled: false` so the decision stays auditable.
+vercel/platforms         —  https://github.com/vercel/platforms
+    Contains NO LICENSE file (verified via the GitHub API, 2026-09-15).
+
+Absent an explicit grant, default copyright applies and redistribution is not
+permitted. No code from either appears anywhere in this repository. Both remain
+recorded in /sources.yml with `enabled: false` so the decisions stay auditable,
+and scripts/license-audit.mjs fails if code ever appears at their paths.
 
 
--------------------------------------------------------------------------------
+===============================================================================
 DERIVED WORK
--------------------------------------------------------------------------------
-Code in the internal directories — frontend/shadcn/templates and
-frontend/chartjs/examples — is written by us and licensed under the MIT licence
-in /LICENSE.
+===============================================================================
+Code in the internal directories — frontend/shadcn/templates,
+frontend/chartjs/examples and frontend/data/patterns — is written by us and
+licensed under the MIT licence in /LICENSE.
 
 It follows conventions established by shadcn/ui (the `cn` utility composed from
 clsx + tailwind-merge, and `cva`-based variant definitions) and is typed against
-the published typings of Chart.js. Both upstream projects are MIT licensed, and
-this notice provides the attribution that licence requires.
+the published typings of Chart.js, TanStack Table, React Hook Form and Zod. All
+of those projects are MIT licensed, and this notice provides the attribution
+that licence requires.
