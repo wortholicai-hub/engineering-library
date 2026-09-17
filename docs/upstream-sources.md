@@ -78,7 +78,7 @@ currently points at.
 
 | Technology | Submodule path (upstream — do not edit) | Pinned commit | Internal code (safe to edit) |
 | --- | --- | --- | --- |
-| shadcn/ui | `frontend/shadcn/upstream/ui` | [`2b3e6d4f8d`](https://github.com/shadcn-ui/ui/commit/2b3e6d4f8d9161fe5c19340dc383aade392012dd) | `frontend/shadcn/templates` |
+| shadcn/ui | `frontend/shadcn/upstream/ui` | [`f5bb039c74`](https://github.com/shadcn-ui/ui/commit/f5bb039c749afd2d111ad970dfaa9ab30bd90b3b) | `frontend/shadcn/templates` |
 | Radix Primitives | `frontend/headless/upstream/radix-primitives` | [`f7ecd5ab16`](https://github.com/radix-ui/primitives/commit/f7ecd5ab16f5e1e820eb5786a1419a98a2d594ae) | — _(nothing of ours depends on it)_ |
 | Headless UI | `frontend/headless/upstream/headlessui` | [`eea57cf46f`](https://github.com/tailwindlabs/headlessui/commit/eea57cf46fd6767ed1059012f7073b88eb159fba) | — _(nothing of ours depends on it)_ |
 | TanStack Table | `frontend/data/upstream/table` | [`affb9e1d60`](https://github.com/TanStack/table/commit/affb9e1d601affd8e2478c07cf8595fac5d5f554) | `frontend/data/patterns` |
