@@ -89,7 +89,7 @@ currently points at.
 | cmdk | `frontend/interaction/upstream/cmdk` | [`dd2250ed60`](https://github.com/dip/cmdk/commit/dd2250ed608443e8f32bafc5fa2d1d07a3746aa3) | — _(nothing of ours depends on it)_ |
 | Sonner | `frontend/interaction/upstream/sonner` | [`8e4662b392`](https://github.com/emilkowalski/sonner/commit/8e4662b39255120b62138312058f5d77c0139a5e) | — _(nothing of ours depends on it)_ |
 | Vaul | `frontend/interaction/upstream/vaul` | [`3e97aac6a3`](https://github.com/emilkowalski/vaul/commit/3e97aac6a38e4481bade71d7233ed6002e80f9b0) | — _(nothing of ours depends on it)_ |
-| react-resizable-panels | `frontend/interaction/upstream/react-resizable-panels` | [`9a2bb1fda8`](https://github.com/bvaughn/react-resizable-panels/commit/9a2bb1fda82773585fbdfe540cb91e6d61e6d323) | — _(nothing of ours depends on it)_ |
+| react-resizable-panels | `frontend/interaction/upstream/react-resizable-panels` | [`ffa22a1dae`](https://github.com/bvaughn/react-resizable-panels/commit/ffa22a1dae86779093bbf40179e4c22e038867cb) | — _(nothing of ours depends on it)_ |
 | Next.js SaaS Starter | `frontend/starters/upstream/saas-starter` | [`6e33e58b1e`](https://github.com/nextjs/saas-starter/commit/6e33e58b1e553a41fe22e6b941a7229a002de361) | — _(nothing of ours depends on it)_ |
 | Next.js Enterprise Boilerplate | `frontend/starters/upstream/next-enterprise` | [`97c4f3ed6b`](https://github.com/Blazity/next-enterprise/commit/97c4f3ed6be0a5b255d0e71606c7b355138281a9) | — _(nothing of ours depends on it)_ |
 | Next.js Boilerplate (ixartz) | `frontend/starters/upstream/next-js-boilerplate` | [`9df22d0980`](https://github.com/ixartz/Next-js-Boilerplate/commit/9df22d0980702729da01c4465b9fb8ca292d6cce) | — _(nothing of ours depends on it)_ |
