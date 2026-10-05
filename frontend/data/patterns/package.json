@@ -12,7 +12,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@tanstack/react-table": "^8.21.3",
-    "react-hook-form": "^7.65.0",
+    "react-hook-form": "^7.89.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {
