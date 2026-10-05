@@ -81,7 +81,7 @@ currently points at.
 | shadcn/ui | `frontend/shadcn/upstream/ui` | [`95efb5cd8d`](https://github.com/shadcn-ui/ui/commit/95efb5cd8d7f13adba70b58b1119211e8980683f) | `frontend/shadcn/templates` |
 | Radix Primitives | `frontend/headless/upstream/radix-primitives` | [`f7ecd5ab16`](https://github.com/radix-ui/primitives/commit/f7ecd5ab16f5e1e820eb5786a1419a98a2d594ae) | — _(nothing of ours depends on it)_ |
 | Headless UI | `frontend/headless/upstream/headlessui` | [`eea57cf46f`](https://github.com/tailwindlabs/headlessui/commit/eea57cf46fd6767ed1059012f7073b88eb159fba) | — _(nothing of ours depends on it)_ |
-| TanStack Table | `frontend/data/upstream/table` | [`1257a3f9dd`](https://github.com/TanStack/table/commit/1257a3f9dd0e2127f11222075d03e026594b44ec) | `frontend/data/patterns` |
+| TanStack Table | `frontend/data/upstream/table` | [`2df4cf3673`](https://github.com/TanStack/table/commit/2df4cf3673dc67fb903e5459ffa28ecfa15d88d4) | `frontend/data/patterns` |
 | React Hook Form | `frontend/data/upstream/react-hook-form` | [`91856c260d`](https://github.com/react-hook-form/react-hook-form/commit/91856c260dc116b28d74c4145b884a7e337285f6) | `frontend/data/patterns` |
 | Zod | `frontend/data/upstream/zod` | [`0b216ef674`](https://github.com/colinhacks/zod/commit/0b216ef674e297ebe41d8bf902262e56f8755822) | `frontend/data/patterns` |
 | Chart.js | `frontend/chartjs/upstream/Chart.js` | [`7169e65147`](https://github.com/chartjs/Chart.js/commit/7169e65147a47f3720957a6f156a33c838ab9f57) | `frontend/chartjs/examples` |
