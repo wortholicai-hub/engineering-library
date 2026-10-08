@@ -79,7 +79,7 @@ currently points at.
 | Technology | Submodule path (upstream — do not edit) | Pinned commit | Internal code (safe to edit) |
 | --- | --- | --- | --- |
 | shadcn/ui | `frontend/shadcn/upstream/ui` | [`0132174664`](https://github.com/shadcn-ui/ui/commit/0132174664c07d41262fb51012d0cc782e458e6c) | `frontend/shadcn/templates` |
-| Radix Primitives | `frontend/headless/upstream/radix-primitives` | [`c71610373b`](https://github.com/radix-ui/primitives/commit/c71610373b6aa17de24f5c7484ced5108160f12b) | — _(nothing of ours depends on it)_ |
+| Radix Primitives | `frontend/headless/upstream/radix-primitives` | [`4e8b0dbc76`](https://github.com/radix-ui/primitives/commit/4e8b0dbc76d3e0189ab1a0ef0ff2245758506840) | — _(nothing of ours depends on it)_ |
 | Headless UI | `frontend/headless/upstream/headlessui` | [`eea57cf46f`](https://github.com/tailwindlabs/headlessui/commit/eea57cf46fd6767ed1059012f7073b88eb159fba) | — _(nothing of ours depends on it)_ |
 | TanStack Table | `frontend/data/upstream/table` | [`2df4cf3673`](https://github.com/TanStack/table/commit/2df4cf3673dc67fb903e5459ffa28ecfa15d88d4) | `frontend/data/patterns` |
 | React Hook Form | `frontend/data/upstream/react-hook-form` | [`36e5329619`](https://github.com/react-hook-form/react-hook-form/commit/36e53296193eb98fc8ffe9db2165cf53ceb62b8e) | `frontend/data/patterns` |
