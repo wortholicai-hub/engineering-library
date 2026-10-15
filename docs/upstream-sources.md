@@ -82,7 +82,7 @@ currently points at.
 | Radix Primitives | `frontend/headless/upstream/radix-primitives` | [`eb3a2b7091`](https://github.com/radix-ui/primitives/commit/eb3a2b7091293e27df8f9ba906632d8daa3d81a3) | — _(nothing of ours depends on it)_ |
 | Headless UI | `frontend/headless/upstream/headlessui` | [`eea57cf46f`](https://github.com/tailwindlabs/headlessui/commit/eea57cf46fd6767ed1059012f7073b88eb159fba) | — _(nothing of ours depends on it)_ |
 | TanStack Table | `frontend/data/upstream/table` | [`95c4768496`](https://github.com/TanStack/table/commit/95c4768496c07b45b1e65d8e33c3291ac66eae9b) | `frontend/data/patterns` |
-| React Hook Form | `frontend/data/upstream/react-hook-form` | [`4fe31875c6`](https://github.com/react-hook-form/react-hook-form/commit/4fe31875c6b9dbf273a2c6f42082801a316de6fa) | `frontend/data/patterns` |
+| React Hook Form | `frontend/data/upstream/react-hook-form` | [`615a529082`](https://github.com/react-hook-form/react-hook-form/commit/615a52908277cdde8124c4bb7e27c5659e853f67) | `frontend/data/patterns` |
 | Zod | `frontend/data/upstream/zod` | [`680d19f7d1`](https://github.com/colinhacks/zod/commit/680d19f7d1e042e55934209caeb79bc843b94f44) | `frontend/data/patterns` |
 | Chart.js | `frontend/chartjs/upstream/Chart.js` | [`7169e65147`](https://github.com/chartjs/Chart.js/commit/7169e65147a47f3720957a6f156a33c838ab9f57) | `frontend/chartjs/examples` |
 | react-chartjs-2 | `frontend/chartjs/upstream/react-chartjs-2` | [`7c7be48ae5`](https://github.com/reactchartjs/react-chartjs-2/commit/7c7be48ae5b585f45bc6aef718cc8d4b51f34d0a) | `frontend/chartjs/examples` |
