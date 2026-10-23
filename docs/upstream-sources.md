@@ -84,7 +84,7 @@ currently points at.
 | TanStack Table | `frontend/data/upstream/table` | [`c14e0221b1`](https://github.com/TanStack/table/commit/c14e0221b1e656c7bb35e7b3d4cdf188719a3599) | `frontend/data/patterns` |
 | React Hook Form | `frontend/data/upstream/react-hook-form` | [`e715d44dac`](https://github.com/react-hook-form/react-hook-form/commit/e715d44dac9fd8c94797faba5a9b49568bca30d6) | `frontend/data/patterns` |
 | Zod | `frontend/data/upstream/zod` | [`afdac65e0f`](https://github.com/colinhacks/zod/commit/afdac65e0f80c0ccf9e8909da97c411567908b57) | `frontend/data/patterns` |
-| Chart.js | `frontend/chartjs/upstream/Chart.js` | [`7169e65147`](https://github.com/chartjs/Chart.js/commit/7169e65147a47f3720957a6f156a33c838ab9f57) | `frontend/chartjs/examples` |
+| Chart.js | `frontend/chartjs/upstream/Chart.js` | [`76d8cf895a`](https://github.com/chartjs/Chart.js/commit/76d8cf895a7485dc838c90ef37e2bc9d9e388fcb) | `frontend/chartjs/examples` |
 | react-chartjs-2 | `frontend/chartjs/upstream/react-chartjs-2` | [`7c7be48ae5`](https://github.com/reactchartjs/react-chartjs-2/commit/7c7be48ae5b585f45bc6aef718cc8d4b51f34d0a) | `frontend/chartjs/examples` |
 | cmdk | `frontend/interaction/upstream/cmdk` | [`dd2250ed60`](https://github.com/dip/cmdk/commit/dd2250ed608443e8f32bafc5fa2d1d07a3746aa3) | — _(nothing of ours depends on it)_ |
 | Sonner | `frontend/interaction/upstream/sonner` | [`8e4662b392`](https://github.com/emilkowalski/sonner/commit/8e4662b39255120b62138312058f5d77c0139a5e) | — _(nothing of ours depends on it)_ |
