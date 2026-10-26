@@ -10,7 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "chart.js": "^4.4.7",
+    "chart.js": "^4.6.1",
     "react": "^19.3.1",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^19.3.1"
