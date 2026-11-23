@@ -83,7 +83,7 @@ currently points at.
 | Headless UI | `frontend/headless/upstream/headlessui` | [`eea57cf46f`](https://github.com/tailwindlabs/headlessui/commit/eea57cf46fd6767ed1059012f7073b88eb159fba) | — _(nothing of ours depends on it)_ |
 | TanStack Table | `frontend/data/upstream/table` | [`1cfb2e57cb`](https://github.com/TanStack/table/commit/1cfb2e57cbfecf25e3d4ee1bda32fbd65e4e0327) | `frontend/data/patterns` |
 | React Hook Form | `frontend/data/upstream/react-hook-form` | [`074d174816`](https://github.com/react-hook-form/react-hook-form/commit/074d174816ae4b4e61856925d296f6afb686387d) | `frontend/data/patterns` |
-| Zod | `frontend/data/upstream/zod` | [`2a343ed2a4`](https://github.com/colinhacks/zod/commit/2a343ed2a4ffbea73fb83862ee1e317662292481) | `frontend/data/patterns` |
+| Zod | `frontend/data/upstream/zod` | [`d40c329910`](https://github.com/colinhacks/zod/commit/d40c329910436e528d3c26cb1b9179e05abebf05) | `frontend/data/patterns` |
 | Chart.js | `frontend/chartjs/upstream/Chart.js` | [`56682e54a0`](https://github.com/chartjs/Chart.js/commit/56682e54a082bc7a83d4e3c04f779ef0e0021a4f) | `frontend/chartjs/examples` |
 | react-chartjs-2 | `frontend/chartjs/upstream/react-chartjs-2` | [`7c7be48ae5`](https://github.com/reactchartjs/react-chartjs-2/commit/7c7be48ae5b585f45bc6aef718cc8d4b51f34d0a) | `frontend/chartjs/examples` |
 | cmdk | `frontend/interaction/upstream/cmdk` | [`dd2250ed60`](https://github.com/dip/cmdk/commit/dd2250ed608443e8f32bafc5fa2d1d07a3746aa3) | — _(nothing of ours depends on it)_ |
