@@ -10,7 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hookform/resolvers": "^7.0.6",
+    "@hookform/resolvers": "^7.0.7",
     "@tanstack/react-table": "^8.21.3",
     "react-hook-form": "^7.92.0",
     "zod": "^4.6.7"
